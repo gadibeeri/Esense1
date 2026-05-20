@@ -338,7 +338,7 @@ function drawBird(s,t){
   ctxBird.clearRect(0,0,W,H);
   if(!therapyOn)return;
 
-  birdY=lerp(birdY,s,.022);
+  birdY=lerp(birdY,s,.024);
   wing+=lerp(4.5,1.9,birdY)*.016;
   const wA=Math.sin(wing)*lerp(.72,.27,birdY);
 
@@ -411,7 +411,7 @@ function loop(){
     r=Math.sqrt(r/buf.length);
 
     // smooth the raw RMS slightly
-    rmsSmooth = lerp(rmsSmooth, r, 0.12);
+    rmsSmooth = lerp(rmsSmooth, r, 0.18);
 
     // auto-learn personal range (slow drift toward observed extremes)
     rmsMin = Math.min(rmsMin, rmsSmooth) * 0.9998 + rmsSmooth * 0.0002;
@@ -435,7 +435,7 @@ function loop(){
 
   // update season
   const d=relaxTarget-season;
-  season+=d*.0014*(Math.abs(d)>.02?1:.3);
+  season+=d*.00154*(Math.abs(d)>.02?1:.3);
   season=clamp(season,0,1);
   camOff+=lerp(.3,1.4,season);
 
