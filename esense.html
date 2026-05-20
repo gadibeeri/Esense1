@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>נשימה וטבע · eSense</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,sans-serif;direction:rtl;background:#06080f;color:#fff}
+
+/* canvases — always in DOM, always fixed, always full screen */
+#cv-bg, #cv-bird {
+  position:fixed;top:0;left:0;
+  width:100vw;height:100vh;
+  display:block;
+}
+#cv-bg  { z-index:1; }
+#cv-bird{ z-index:2; pointer-events:none; }
+
+/* home — sits above canvas */
+#home{
+  position:fixed;inset:0;z-index:50;
+  overflow-y:auto;
+  background:linear-gradient(160deg,#06090f,#0c1828);
+  padding:44px 0 28px;
+  transition:opacity .7s,transform .7s;
+}
+#home.out{opacity:0;transform:scale(1.04);pointer-events:none}
+
+/* HUD — above canvas, below home */
+#hud{
+  position:fixed;bottom:0;left:0;right:0;z-index:10;
+  padding:50px 28px max(18px,env(safe-area-inset-bottom));
+  background:linear-gradient(to top,rgba(0,0,0,.58),transparent);
+  display:flex;flex-direction:column;align-items:center;gap:9px;
+  pointer-events:none;
+  opacity:0;transition:opacity .8s;
+}
+#hud.on{opacity:1}
+#season-lbl{font-size:14px;font-style:italic;color:rgba(255,255,255,.78);letter-spacing:.18em;text-shadow:0 2px 14px rgba(0,0,0,.8)}
+#pbar{width:min(210px,52vw);height:2px;background:rgba(255,255,255,.2);border-radius:99px;position:relative}
+#pfill{height:100%;border-radius:99px;background:linear-gradient(90deg,#7ab8e8,#98e880);width:0%;transition:width .9s cubic-bezier(.25,.46,.45,.94)}
+#pdot{position:absolute;top:50%;left:0%;transform:translate(-50%,-50%);width:7px;height:7px;border-radius:50%;background:#fff;box-shadow:0 0 9px rgba(255,255,255,.6);transition:left .9s cubic-bezier(.25,.46,.45,.94)}
+
+#rms-badge{position:fixed;top:max(12px,env(safe-area-inset-top));left:12px;z-index:11;background:rgba(0,0,0,.32);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:5px 9px;font-size:11px;font-family:monospace;color:rgba(255,255,255,.5);display:none}
+#back-btn{position:fixed;top:max(12px,env(safe-area-inset-top));right:12px;z-index:11;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.3);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.14);color:rgba(255,255,255,.8);font-size:13px;cursor:pointer;display:none;align-items:center;justify-content:center}
+
+/* home UI */
+.hi{padding:0 20px;display:flex;flex-direction:column;gap:16px}
+.logo{font-size:clamp(1.9rem,8vw,2.6rem);font-weight:300;line-height:1.1;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,.07)}
+.logo em{font-style:italic;color:rgba(150,205,255,.7)}
+.card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:16px;overflow:hidden}
+.crow{padding:13px 16px;border-bottom:1px solid rgba(255,255,255,.06)}
+.crow:last-child{border-bottom:none}
+.lbl{font-size:11px;color:rgba(255,255,255,.32);letter-spacing:.08em;margin-bottom:4px}
+.val{font-size:14px;color:rgba(255,255,255,.8)}
+.rmsnum{font-size:26px;font-family:monospace;color:#fff;margin-bottom:8px}
+.rbar{height:5px;background:rgba(255,255,255,.1);border-radius:99px;overflow:hidden}
+.rfill{height:100%;background:linear-gradient(90deg,#4ecb71,#a8e090);border-radius:99px;width:0%;transition:width .1s}
+.dot{width:10px;height:10px;border-radius:50%;background:#252525;transition:all .3s}
+.dot.on{background:#4ecb71;box-shadow:0 0 8px #4ecb71;animation:dp 1.8s infinite}
+@keyframes dp{0%,100%{opacity:1}50%{opacity:.3}}
+select,input[type=range]{width:100%;accent-color:#4ecb71}
+select{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#fff;padding:9px 11px;font-size:13px;outline:none;appearance:none}
+select option{background:#0d1828}
+.btn{width:100%;padding:11px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:rgba(255,255,255,.72);font-size:13px;cursor:pointer}
+.btn.on{background:rgba(122,184,232,.12);border-color:rgba(122,184,232,.35);color:#7ab8e8}
+.btn.danger{background:rgba(220,80,80,.1);border-color:rgba(220,80,80,.3);color:#e08080}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rng{display:flex;flex-direction:column;gap:5px}
+.rv{font-size:10px;color:rgba(255,255,255,.26);direction:ltr}
+.start-btn{width:100%;padding:17px;border-radius:14px;background:linear-gradient(135deg,rgba(65,145,215,.24),rgba(30,105,170,.16));border:1px solid rgba(90,170,255,.25);color:#fff;font-size:17px;font-style:italic;letter-spacing:.05em;cursor:pointer}
+.instr{background:rgba(255,200,75,.06);border:1px solid rgba(255,200,75,.16);border-radius:12px;padding:12px 14px;font-size:12px;color:rgba(255,218,125,.82);line-height:1.75}
+.status-row{display:flex;align-items:center;justify-content:space-between}
+</style>
+</head>
+<body>
+
+<!-- canvases ALWAYS in DOM -->
+<canvas id="cv-bg"></canvas>
+<canvas id="cv-bird"></canvas>
+
+<!-- HUD (above canvas) -->
+<div id="hud">
+  <div id="season-lbl">❄️ חורף</div>
+  <div id="pbar"><div id="pfill"></div><div id="pdot"></div></div>
+</div>
+<div id="rms-badge">RMS: —</div>
+<button id="back-btn">✕</button>
+
+<!-- HOME (above everything) -->
+<div id="home">
+<div class="hi">
+  <div>
+    <div style="font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.28);margin-bottom:8px">Mindfield eSense · Biofeedback</div>
+    <div class="logo">נשימה <em>וטבע</em></div>
+    <div style="font-size:13px;color:rgba(255,255,255,.36);margin-top:8px;line-height:1.6">ציפור עפה גבוה ככל שאתה רגוע יותר</div>
+  </div>
+
+  <div class="card">
+    <div class="crow">
+      <div class="status-row">
+        <div><div class="lbl">חיישן eSense</div><div class="val" id="sens-lbl">לא מחובר</div></div>
+        <div class="dot" id="sdot"></div>
+      </div>
+    </div>
+    <div class="crow" id="rms-crow" style="display:none">
+      <div class="lbl">RMS — אות גולמי</div>
+      <div class="rmsnum" id="rms-num">0.0000</div>
+      <div class="rbar"><div class="rfill" id="rfill"></div></div>
+    </div>
+    <div class="crow" id="dev-crow" style="display:none">
+      <div class="lbl" style="margin-bottom:6px">כניסת אודיו</div>
+      <select id="devsel"></select>
+    </div>
+    <div class="crow">
+      <button class="btn" id="reset-cal-btn" style="background:rgba(255,200,75,.07);border-color:rgba(255,200,75,.2);color:rgba(255,218,125,.8)">↺ אפס כיול אוטומטי</button>
+    </div>
+    <div class="crow"><button class="btn" id="conn-btn">🔌 חבר חיישן eSense</button></div>
+  </div>
+
+  <div class="instr">
+    <strong>הנחיות:</strong><br>
+    1. חבר eSense לשקע האוזניות<br>
+    2. לחץ "חבר" ואשר הרשאת מיקרופון<br>
+    3. נגע באלקטרודות — ה-RMS צריך לעלות<br>
+    4. כוונן את הסף לפי הערכים שרואים
+  </div>
+
+  <div class="card">
+    <div class="crow">
+      <div class="lbl" style="margin-bottom:8px">הדגמה ידנית (ללא חיישן)</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <span style="font-size:12px;color:rgba(255,255,255,.35)">לחץ</span>
+        <input type="range" id="demo-sl" min="0" max="100" value="5" style="flex:1;accent-color:#7ab8e8">
+        <span style="font-size:12px;color:rgba(255,255,255,.35)">רגוע</span>
+      </div>
+      <button class="btn" id="auto-btn">▶ הדגמה אוטומטית</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="crow">
+      <div class="status-row" style="width:100%">
+        <div><div class="lbl">עונה</div><div class="val" id="h-season">❄️ חורף</div></div>
+        <div><div class="lbl">ציפור</div><div class="val" id="h-bird">🌿 נמוכה</div></div>
+      </div>
+    </div>
+  </div>
+
+  <button class="start-btn" id="start-btn">התחל טיפול →</button>
+  <div style="height:4px"></div>
+</div>
+</div>
+
+<script>
+// ═══════════════════════════════════
+//  STATE
+// ═══════════════════════════════════
+let relaxTarget=0.05, season=0, thLo=0.003, thHi=0.06;
+// adaptive scaling — learns your personal range automatically
+let rmsMin=999, rmsMax=0, rmsSmooth=0;
+let micStream=null,audioCtx=null,analyser=null,connected=false;
+let autoRaf=null,autoDir=1,rafId=null;
+let therapyOn=false;
+
+const lerp=(a,b,t)=>a+(b-a)*t;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function lerpC(c1,c2,t){
+  const p=n=>parseInt(n,16);
+  const a=[p(c1.slice(1,3)),p(c1.slice(3,5)),p(c1.slice(5,7))];
+  const b=[p(c2.slice(1,3)),p(c2.slice(3,5)),p(c2.slice(5,7))];
+  return`rgb(${a.map((v,i)=>Math.round(lerp(v,b[i],t))).join(',')})`;
+}
+
+// ═══════════════════════════════════
+//  CANVAS SETUP
+// ═══════════════════════════════════
+const cvBg  = document.getElementById('cv-bg');
+const cvBird= document.getElementById('cv-bird');
+const ctxBg = cvBg.getContext('2d');
+const ctxBird=cvBird.getContext('2d');
+
+function setSize(){
+  const W=window.innerWidth, H=window.innerHeight;
+  cvBg.width=W; cvBg.height=H;
+  cvBird.width=W; cvBird.height=H;
+}
+setSize();
+window.addEventListener('resize',setSize);
+
+// ═══════════════════════════════════
+//  SCENE DATA
+// ═══════════════════════════════════
+const STARS=Array.from({length:80},()=>({x:Math.random(),y:Math.random()*.52,r:Math.random()*1.2+.3,ph:Math.random()*6.28}));
+const MTNS =Array.from({length:7},(_,i)=>({x:i/6,h:.16+Math.sin(i*2.1)*.06,w:.13+Math.cos(i*1.7)*.03}));
+const TREES=Array.from({length:26},(_,i)=>({x:.04+(i/26)*1.1,tH:.10+(i%5)*.018,sp:.055+(i%4)*.012,ly:2+(i%2)}));
+const FLWRS=Array.from({length:36},(_,i)=>({x:.02+i*.027,y:.73+Math.random()*.09,c:['#ff88aa','#ffcc44','#ff88cc','#bb88ff','#88ccff'][i%5]}));
+let camOff=0, birdY=0, wing=0;
+
+// ═══════════════════════════════════
+//  DRAW SCENE
+// ═══════════════════════════════════
+function drawScene(s,t){
+  const W=cvBg.width, H=cvBg.height, gY=H*.67;
+  ctxBg.clearRect(0,0,W,H);
+
+  // sky
+  const g=ctxBg.createLinearGradient(0,0,0,gY);
+  g.addColorStop(0,lerpC('#080d1e','#1870b8',s));
+  g.addColorStop(1,lerpC('#162340','#7dcce8',s));
+  ctxBg.fillStyle=g; ctxBg.fillRect(0,0,W,H);
+
+  // stars
+  if(s<.65){
+    const sa=1-s/.65;
+    STARS.forEach(st=>{
+      const tw=.5+.5*Math.sin(t*1.8+st.ph);
+      ctxBg.beginPath(); ctxBg.arc(st.x*W,st.y*H,st.r,0,Math.PI*2);
+      ctxBg.fillStyle=`rgba(255,255,255,${sa*tw*.8})`; ctxBg.fill();
+    });
+  }
+
+  // moon
+  if(s<.4){
+    const a=1-s/.4;
+    ctxBg.beginPath(); ctxBg.arc(W*.78,H*.1,H*.036,0,Math.PI*2);
+    ctxBg.fillStyle=`rgba(210,220,245,${a*.9})`; ctxBg.fill();
+    ctxBg.beginPath(); ctxBg.arc(W*.785,H*.097,H*.028,0,Math.PI*2);
+    ctxBg.fillStyle=`rgba(10,16,38,${a*.9})`; ctxBg.fill();
+  }
+
+  // sun
+  if(s>.22){
+    const a=clamp((s-.22)/.32,0,1);
+    const sx=W*.75,sy=H*.11,sr=H*.046+s*H*.02;
+    const gl=ctxBg.createRadialGradient(sx,sy,sr*.4,sx,sy,sr*3.5);
+    gl.addColorStop(0,`rgba(255,238,90,${a*.35})`); gl.addColorStop(1,'rgba(255,238,90,0)');
+    ctxBg.fillStyle=gl; ctxBg.beginPath(); ctxBg.arc(sx,sy,sr*3.5,0,Math.PI*2); ctxBg.fill();
+    ctxBg.beginPath(); ctxBg.arc(sx,sy,sr,0,Math.PI*2);
+    ctxBg.fillStyle=`rgba(255,232,80,${a})`; ctxBg.fill();
+  }
+
+  // clouds
+  const cA=lerp(.06,.72,s);
+  for(let i=0;i<6;i++){
+    const cx=((0.09+i*.18+t*.0022+camOff*.00015)%1.12-.04)*W;
+    const cy=(.06+i*.03+(i%2)*.036)*H, cr=H*.044+i*H*.016;
+    ctxBg.beginPath();
+    ctxBg.arc(cx,cy,cr,0,Math.PI*2);
+    ctxBg.arc(cx+cr*.75,cy+cr*.1,cr*.76,0,Math.PI*2);
+    ctxBg.arc(cx-cr*.5,cy+cr*.18,cr*.65,0,Math.PI*2);
+    const cc=lerpC('#5a6898','#eceff5',s);
+    ctxBg.fillStyle=cc.replace('rgb','rgba').replace(')',`,${cA})`); ctxBg.fill();
+  }
+
+  // mountains
+  MTNS.forEach(m=>{
+    const mx=((m.x-camOff*.0003+1.3)%1.4-.1)*W;
+    const mH=m.h*H,mW=m.w*W;
+    ctxBg.beginPath(); ctxBg.moveTo(mx-mW/2,gY+4); ctxBg.lineTo(mx,gY-mH); ctxBg.lineTo(mx+mW/2,gY+4);
+    ctxBg.closePath(); ctxBg.fillStyle=lerpC('#253048','#3c5d38',s); ctxBg.fill();
+    if(s<.72){
+      const ca=1-s/.72;
+      ctxBg.beginPath(); ctxBg.moveTo(mx,gY-mH); ctxBg.lineTo(mx-mW*.13,gY-mH+mH*.19); ctxBg.lineTo(mx+mW*.13,gY-mH+mH*.19);
+      ctxBg.fillStyle=`rgba(208,222,244,${ca*.88})`; ctxBg.fill();
+    }
+  });
+
+  // ground
+  const gg=ctxBg.createLinearGradient(0,gY,0,H);
+  gg.addColorStop(0,lerpC('#a8bacc','#44a820',s));
+  gg.addColorStop(1,lerpC('#6c8090','#226010',s));
+  ctxBg.fillStyle=gg; ctxBg.fillRect(0,gY,W,H-gY);
+
+  // snow on ground
+  if(s<.82){
+    ctxBg.fillStyle=`rgba(215,228,248,${(1-s/.82)*.9})`;
+    ctxBg.fillRect(0,gY,W,H*.028);
+  }
+
+  // flowers
+  if(s>.28){
+    const fa=clamp((s-.28)/.55,0,1);
+    FLWRS.forEach(fl=>{
+      const fx=((fl.x-camOff*.0005+2)%2)*W, fy=fl.y*H;
+      ctxBg.strokeStyle=`rgba(45,120,35,${fa*.8})`; ctxBg.lineWidth=1.5;
+      ctxBg.beginPath(); ctxBg.moveTo(fx,fy+H*.024); ctxBg.lineTo(fx,fy); ctxBg.stroke();
+      for(let p=0;p<5;p++){
+        const a=(p/5)*Math.PI*2;
+        ctxBg.beginPath(); ctxBg.arc(fx+Math.cos(a)*5,fy+Math.sin(a)*5,3,0,Math.PI*2);
+        ctxBg.fillStyle=fl.c+(Math.round(fa*210).toString(16).padStart(2,'0')); ctxBg.fill();
+      }
+      ctxBg.beginPath(); ctxBg.arc(fx,fy,2.5,0,Math.PI*2);
+      ctxBg.fillStyle=`rgba(255,228,55,${fa*.9})`; ctxBg.fill();
+    });
+  }
+
+  // trees
+  TREES.forEach(tr=>{
+    const tx=((tr.x-camOff*.0007+2.8)%2.8-.2)*W;
+    const tH=tr.tH*H, tW=tr.sp*W;
+    ctxBg.fillStyle='#30120a'; ctxBg.fillRect(tx-tW*.05,gY-tH,tW*.1,tH);
+    for(let l=0;l<tr.ly;l++){
+      const ly=gY-tH*(.46+l*.27), lw=tW*(1-l*.2), lh=tH*.38;
+      if(s<.78){const sn=1-s/.78; ctxBg.beginPath(); ctxBg.ellipse(tx,ly,lw*.52,lh*.33,0,0,Math.PI*2); ctxBg.fillStyle=`rgba(208,222,244,${sn*.85})`; ctxBg.fill();}
+      if(s>.1&&s<.68){const ba=clamp((s-.1)/.36,0,1)*clamp(1-(s-.5)/.22,0,1); ctxBg.beginPath(); ctxBg.ellipse(tx,ly,lw*.5,lh*.32,0,0,Math.PI*2); ctxBg.fillStyle=`rgba(255,170,196,${ba*.82})`; ctxBg.fill();}
+      if(s>.4){const la=clamp((s-.4)/.4,0,1); ctxBg.beginPath(); ctxBg.ellipse(tx,ly,lw*.55,lh*.36,0,0,Math.PI*2); ctxBg.fillStyle=`hsla(${lerp(88,120,la)},64%,${lerp(28,40,la)}%,${la*.88})`; ctxBg.fill();}
+    }
+  });
+
+  // snow particles
+  if(s<.7){
+    const sa=1-s/.7;
+    for(let i=0;i<80;i++){
+      const sf=((i*.067+t*.018)%1), sx=((i*.137+t*.005)%1)*W;
+      ctxBg.beginPath(); ctxBg.arc(sx,sf*H,1+i%3*.5,0,Math.PI*2);
+      ctxBg.fillStyle=`rgba(218,230,248,${sa*(.36+i%3*.13)})`; ctxBg.fill();
+    }
+  }
+
+  // cherry petals
+  if(s>.18){
+    const pa=clamp((s-.18)/.5,0,1);
+    for(let i=0;i<50;i++){
+      const pf=((i*.073+t*.012)%1), px=((i*.187+t*.004+camOff*.0004)%1)*W;
+      ctxBg.beginPath(); ctxBg.ellipse(px,pf*H,4.5,2.5,t*.5+i,0,Math.PI*2);
+      ctxBg.fillStyle=`rgba(255,165,195,${pa*.76})`; ctxBg.fill();
+    }
+  }
+}
+
+// ═══════════════════════════════════
+//  DRAW BIRD
+// ═══════════════════════════════════
+function drawBird(s,t){
+  const W=cvBird.width, H=cvBird.height;
+  ctxBird.clearRect(0,0,W,H);
+  if(!therapyOn)return;
+
+  birdY=lerp(birdY,s,.022);
+  wing+=lerp(4.5,1.9,birdY)*.016;
+  const wA=Math.sin(wing)*lerp(.72,.27,birdY);
+
+  const bX=W*.24;
+  const bYpos=lerp(H*.74,H*.13,birdY)+Math.sin(t*.9)*H*.007;
+  const sz=lerp(W*.108,W*.084,birdY);
+  const col=`rgb(${Math.round(lerp(226,255,s))},${Math.round(lerp(230,248,s))},${Math.round(lerp(242,234,s))})`;
+
+  ctxBird.save();
+  ctxBird.translate(bX,bYpos);
+  ctxBird.shadowColor='rgba(0,0,0,.42)';
+  ctxBird.shadowBlur=20; ctxBird.shadowOffsetX=5; ctxBird.shadowOffsetY=8;
+
+  // wings
+  for(const dir of[-1,1]){
+    ctxBird.save(); ctxBird.rotate(dir*wA);
+    ctxBird.beginPath(); ctxBird.moveTo(0,0);
+    ctxBird.bezierCurveTo(dir*sz*.13,-sz*.3,dir*sz*.88,-sz*.62,dir*sz*1.18,-sz*.18);
+    ctxBird.bezierCurveTo(dir*sz*.9,-sz*.02,dir*sz*.42,sz*.07,0,0);
+    ctxBird.fillStyle=col; ctxBird.fill();
+    ctxBird.shadowColor='transparent';
+    for(let f=1;f<=5;f++){
+      const fx=lerp(0,dir*sz*1.18,f/5.8),fy=lerp(0,-sz*.18,f/5.8)-sz*.06;
+      ctxBird.strokeStyle='rgba(130,122,110,.3)'; ctxBird.lineWidth=1;
+      ctxBird.beginPath(); ctxBird.moveTo(fx*.87,fy+sz*.05); ctxBird.lineTo(fx,fy-sz*.09); ctxBird.stroke();
+    }
+    ctxBird.restore();
+  }
+
+  ctxBird.shadowColor='transparent';
+  // body
+  ctxBird.beginPath(); ctxBird.ellipse(0,sz*.04,sz*.26,sz*.13,0,0,Math.PI*2);
+  ctxBird.fillStyle=col; ctxBird.fill();
+  // head
+  ctxBird.beginPath(); ctxBird.ellipse(sz*.23,-sz*.082,sz*.13,sz*.115,.1,0,Math.PI*2);
+  ctxBird.fillStyle=col; ctxBird.fill();
+  // beak
+  ctxBird.beginPath(); ctxBird.moveTo(sz*.33,-sz*.1); ctxBird.lineTo(sz*.54,-sz*.068); ctxBird.lineTo(sz*.33,-sz*.03);
+  ctxBird.fillStyle='#c49028'; ctxBird.fill();
+  // tail
+  ctxBird.beginPath(); ctxBird.moveTo(-sz*.2,sz*.06);
+  ctxBird.bezierCurveTo(-sz*.38,-sz*.01,-sz*.52,-sz*.08,-sz*.49,-sz*.21);
+  ctxBird.bezierCurveTo(-sz*.44,-sz*.1,-sz*.3,sz*.04,-sz*.17,sz*.1);
+  ctxBird.fillStyle=col; ctxBird.fill();
+  // eye
+  ctxBird.beginPath(); ctxBird.arc(sz*.28,-sz*.1,sz*.028,0,Math.PI*2); ctxBird.fillStyle='#0a0a0a'; ctxBird.fill();
+  ctxBird.beginPath(); ctxBird.arc(sz*.274,-sz*.107,sz*.01,0,Math.PI*2); ctxBird.fillStyle='rgba(255,255,255,.82)'; ctxBird.fill();
+  ctxBird.restore();
+
+  // ground shadow
+  const gY=H*.67,shW=lerp(W*.055,W*.012,birdY),shA=lerp(.18,.02,birdY);
+  const sg=ctxBird.createRadialGradient(bX,gY-2,0,bX,gY-2,shW);
+  sg.addColorStop(0,`rgba(0,0,0,${shA})`); sg.addColorStop(1,'rgba(0,0,0,0)');
+  ctxBird.fillStyle=sg; ctxBird.beginPath(); ctxBird.ellipse(bX,gY-2,shW,shW*.24,0,0,Math.PI*2); ctxBird.fill();
+}
+
+// ═══════════════════════════════════
+//  MAIN LOOP — always running
+// ═══════════════════════════════════
+const t0=performance.now();
+function loop(){
+  rafId=requestAnimationFrame(loop);
+  const t=(performance.now()-t0)/1000;
+
+  // read sensor
+  if(analyser){
+    const buf=new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(buf);
+    let r=0; for(let i=0;i<buf.length;i++)r+=buf[i]*buf[i];
+    r=Math.sqrt(r/buf.length);
+
+    // smooth the raw RMS slightly
+    rmsSmooth = lerp(rmsSmooth, r, 0.12);
+
+    // auto-learn personal range (slow drift toward observed extremes)
+    rmsMin = Math.min(rmsMin, rmsSmooth) * 0.9998 + rmsSmooth * 0.0002;
+    rmsMax = Math.max(rmsMax, rmsSmooth) * 0.9998 + rmsSmooth * 0.0002;
+    // ensure a minimum spread so we don't divide by zero
+    const spread = Math.max(rmsMax - rmsMin, 0.002);
+
+    // high RMS = stress = winter (low relax), low RMS = calm = spring (high relax)
+    relaxTarget = 1 - clamp((rmsSmooth - rmsMin) / spread, 0, 1);
+
+    document.getElementById('rms-num').textContent=r.toFixed(4);
+    document.getElementById('rms-badge').textContent='RMS: '+r.toFixed(4);
+    // bar shows relaxation level directly
+    document.getElementById('rfill').style.width=(relaxTarget*100)+'%';
+  }
+
+  if(!therapyOn){
+    drawBird(season,t); // keep bird state but draw nothing
+    return;
+  }
+
+  // update season
+  const d=relaxTarget-season;
+  season+=d*.0014*(Math.abs(d)>.02?1:.3);
+  season=clamp(season,0,1);
+  camOff+=lerp(.3,1.4,season);
+
+  drawScene(season,t);
+  drawBird(season,t);
+
+  // HUD
+  const pct=Math.round(season*100);
+  document.getElementById('pfill').style.width=pct+'%';
+  document.getElementById('pdot').style.left=pct+'%';
+  const sw=season<.1?'❄️ חורף':season<.35?'🌨 סוף חורף':season<.62?'🌸 תחילת אביב':'🌸 אביב';
+  document.getElementById('season-lbl').textContent=sw;
+  document.getElementById('h-season').textContent=sw;
+  document.getElementById('h-bird').textContent=season<.15?'🌿 נמוכה':season<.45?'🌤 בינונית':season<.75?'☁️ גבוהה':'🌟 גבוה מאוד';
+}
+loop();
+
+// ═══════════════════════════════════
+//  AUDIO
+// ═══════════════════════════════════
+async function connectSensor(){
+  if(connected){
+    micStream?.getTracks().forEach(t=>t.stop()); audioCtx?.close();
+    micStream=audioCtx=analyser=null; connected=false;
+    document.getElementById('sens-lbl').textContent='לא מחובר';
+    document.getElementById('sdot').className='dot';
+    document.getElementById('conn-btn').textContent='🔌 חבר חיישן eSense';
+    document.getElementById('conn-btn').className='btn';
+    document.getElementById('rms-crow').style.display='none';
+    return;
+  }
+  try{
+    const tmp=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+    tmp.getTracks().forEach(t=>t.stop());
+    const devs=await navigator.mediaDevices.enumerateDevices();
+    const aud=devs.filter(d=>d.kind==='audioinput');
+    const sel=document.getElementById('devsel');
+    sel.innerHTML=aud.map((d,i)=>`<option value="${d.deviceId}">${d.label||'כניסה '+(i+1)}</option>`).join('');
+    if(aud.length>1)document.getElementById('dev-crow').style.display='block';
+
+    const stream=await navigator.mediaDevices.getUserMedia({audio:{
+      deviceId:aud[0]?.deviceId?{exact:aud[0].deviceId}:undefined,
+      echoCancellation:false,noiseSuppression:false,autoGainControl:false
+    }});
+    micStream=stream;
+    audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    analyser=audioCtx.createAnalyser(); analyser.fftSize=2048; analyser.smoothingTimeConstant=.78;
+    audioCtx.createMediaStreamSource(stream).connect(analyser);
+    connected=true;
+    document.getElementById('sens-lbl').textContent='מחובר ✓';
+    document.getElementById('sdot').className='dot on';
+    document.getElementById('conn-btn').textContent='🔴 נתק';
+    document.getElementById('conn-btn').className='btn danger';
+    document.getElementById('rms-crow').style.display='block';
+  }catch(e){
+    document.getElementById('sens-lbl').textContent='שגיאה: '+e.message;
+  }
+}
+
+document.getElementById('devsel').onchange=async function(){
+  if(!connected)return;
+  micStream?.getTracks().forEach(t=>t.stop()); audioCtx?.close();
+  const stream=await navigator.mediaDevices.getUserMedia({audio:{deviceId:{exact:this.value},echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+  micStream=stream; audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  analyser=audioCtx.createAnalyser(); analyser.fftSize=2048; analyser.smoothingTimeConstant=.78;
+  audioCtx.createMediaStreamSource(stream).connect(analyser);
+};
+
+// ═══════════════════════════════════
+//  DEMO
+// ═══════════════════════════════════
+document.getElementById('demo-sl').oninput=function(){
+  relaxTarget=this.value/100;
+  if(autoRaf){cancelAnimationFrame(autoRaf);autoRaf=null;document.getElementById('auto-btn').textContent='▶ הדגמה אוטומטית';document.getElementById('auto-btn').className='btn';}
+};
+document.getElementById('auto-btn').onclick=function(){
+  if(autoRaf){cancelAnimationFrame(autoRaf);autoRaf=null;this.textContent='▶ הדגמה אוטומטית';this.className='btn';}
+  else{
+    this.textContent='⏹ עצור';this.className='btn on';
+    (function step(){relaxTarget+=autoDir*.0025;if(relaxTarget>=1){relaxTarget=1;autoDir=-1;}if(relaxTarget<=0){relaxTarget=0;autoDir=1;}autoRaf=requestAnimationFrame(step);})();
+  }
+};
+
+// reset calibration
+document.getElementById('reset-cal-btn').onclick=()=>{
+  rmsMin=999; rmsMax=0; rmsSmooth=0;
+  document.getElementById('reset-cal-btn').textContent='✓ אופס!';
+  setTimeout(()=>document.getElementById('reset-cal-btn').textContent='↺ אפס כיול אוטומטי',1500);
+};
+
+// ═══════════════════════════════════
+//  SCREEN TRANSITIONS
+// ═══════════════════════════════════
+document.getElementById('start-btn').onclick=()=>{
+  // start auto demo so something moves immediately
+  if(!autoRaf&&!connected){
+    document.getElementById('auto-btn').textContent='⏹ עצור';
+    document.getElementById('auto-btn').className='btn on';
+    (function step(){relaxTarget+=autoDir*.0025;if(relaxTarget>=1){relaxTarget=1;autoDir=-1;}if(relaxTarget<=0){relaxTarget=0;autoDir=1;}autoRaf=requestAnimationFrame(step);})();
+  }
+  therapyOn=true;
+  document.getElementById('home').classList.add('out');
+  document.getElementById('hud').classList.add('on');
+  document.getElementById('rms-badge').style.display='block';
+  document.getElementById('back-btn').style.display='flex';
+  setTimeout(()=>document.getElementById('home').style.visibility='hidden',750);
+};
+
+document.getElementById('back-btn').onclick=()=>{
+  therapyOn=false;
+  document.getElementById('home').style.visibility='';
+  document.getElementById('home').classList.remove('out');
+  document.getElementById('hud').classList.remove('on');
+  document.getElementById('rms-badge').style.display='none';
+  document.getElementById('back-btn').style.display='none';
+};
+
+document.getElementById('conn-btn').onclick=connectSensor;
+</script>
+</body>
+</html>
