@@ -42,7 +42,8 @@ select option{background:#0d1828}
 .scene-cards{display:flex;flex-direction:column;gap:10px}
 .scene-card{border-radius:14px;overflow:hidden;cursor:pointer;border:2px solid transparent;transition:all .25s;position:relative;user-select:none;-webkit-user-select:none}
 .scene-card.sel{border-color:rgba(90,170,255,.6);box-shadow:0 0 20px rgba(90,170,255,.15)}
-.scene-thumb{width:100%;height:90px;display:block;position:relative;overflow:hidden;pointer-events:none}
+.scene-card *{pointer-events:none}
+.scene-thumb{width:100%;height:90px;display:block;overflow:hidden}
 .scene-info{padding:11px 14px;background:rgba(0,0,0,.5);backdrop-filter:blur(6px)}
 .scene-name{font-size:15px;color:#fff;margin-bottom:2px}
 .scene-desc{font-size:12px;color:rgba(255,255,255,.45)}
@@ -248,6 +249,7 @@ const FLWRS=Array.from({length:36},(_,i)=>({x:.02+i*.027,y:.73+Math.random()*.09
 let camOff=0,birdY=0,wing=0;
 
 function drawForest(s,t,ctx,W,H){
+  if(!W||!H){W=innerWidth;H=innerHeight;}
   const gY=H*.67;ctx.clearRect(0,0,W,H);
   const g=ctx.createLinearGradient(0,0,0,gY);
   g.addColorStop(0,lerpC('#080d1e','#1870b8',s));g.addColorStop(1,lerpC('#162340','#7dcce8',s));
@@ -272,6 +274,7 @@ function forestLabel(s){return s<.1?'❄️ חורף':s<.35?'🌨 סוף חור�
 //  SCENE 2: SEED → FRUIT TREE
 // ═══════════════════════════════════════
 function drawSeed(s,t,ctx,W,H){
+  if(!W||!H){W=innerWidth;H=innerHeight;}
   ctx.clearRect(0,0,W,H);
   // sky: dawn→golden afternoon
   const skyG=ctx.createLinearGradient(0,0,0,H);
@@ -427,6 +430,7 @@ let waveOff=0;
 const STARS_SEA=Array.from({length:100},()=>({x:Math.random(),y:Math.random()*.6,r:Math.random()*1.4+.3,ph:Math.random()*6.28}));
 
 function drawSunset(s,t,ctx,W,H){
+  if(!W||!H){W=innerWidth;H=innerHeight;}
   ctx.clearRect(0,0,W,H);
   const hZ=H*.44;
 
@@ -802,7 +806,8 @@ function loop(){
   prevSeason=season;
 
   // draw current scene
-  const W=cvBg.width,H=cvBg.height;
+  const W=cvBg.width||innerWidth, H=cvBg.height||innerHeight;
+  if(!cvBg.width||!cvBg.height) setSize();
   if(currentScene==='forest'){drawForest(season,t,ctxBg,W,H);drawBird(season,t);}
   else if(currentScene==='seed'){drawSeed(season,t,ctxBg,W,H);ctxBird.clearRect(0,0,W,H);}
   else if(currentScene==='sunset'){drawSunset(season,t,ctxBg,W,H);ctxBird.clearRect(0,0,W,H);}
@@ -912,6 +917,12 @@ document.getElementById('reset-cal-btn').onclick=()=>{rmsMin=999;rmsMax=0;rmsSmo
 document.getElementById('start-btn').onclick=()=>{
   if(!autoRaf&&!connected){document.getElementById('auto-btn').textContent='⏹ עצור';document.getElementById('auto-btn').className='btn on';(function step(){relaxTarget+=autoDir*.0025;if(relaxTarget>=1){relaxTarget=1;autoDir=-1;}if(relaxTarget<=0){relaxTarget=0;autoDir=1;}autoRaf=requestAnimationFrame(step);})();}
   season=0;relaxTarget=0.05;birdY=0;camOff=0;waveOff=0;
+  // auto start demo for sunset so user sees movement immediately
+  if(!autoRaf&&!connected){
+    document.getElementById('auto-btn').textContent='⏹ עצור';
+    document.getElementById('auto-btn').className='btn on';
+    (function step(){relaxTarget+=autoDir*.0025;if(relaxTarget>=1){relaxTarget=1;autoDir=-1;}if(relaxTarget<=0){relaxTarget=0;autoDir=1;}autoRaf=requestAnimationFrame(step);})();
+  }
   initSounds(currentScene);requestWakeLock();
   therapyOn=true;
   document.getElementById('home').classList.add('out');
