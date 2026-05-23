@@ -106,7 +106,7 @@ select option{background:#0d1828}
       <div class="lbl" style="margin-bottom:10px">משך הסשן</div>
       <div class="dur-tabs">
         <button class="dur-tab sel" data-min="5">5 דקות</button>
-        <button class="dur-tab" data-min="15">15 דקות</button>
+        <button class="dur-tab" data-min="10">10 דקות</button>
       </div>
     </div>
   </div>
@@ -280,18 +280,19 @@ function playBell(){
     const o=ac.createOscillator();
     const g=ac.createGain();
     o.connect(g);g.connect(ac.destination);
-    o.frequency.value=880;o.type='sine';
-    g.gain.setValueAtTime(0.4,ac.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+1.8);
-    // add harmonics for richer bell
+    o.frequency.value=660;o.type='sine';
+    g.gain.setValueAtTime(0.0,ac.currentTime);
+    g.gain.linearRampToValueAtTime(0.18,ac.currentTime+0.03);
+    g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+2.5);
     const o2=ac.createOscillator();
     const g2=ac.createGain();
     o2.connect(g2);g2.connect(ac.destination);
-    o2.frequency.value=1760;o2.type='sine';
-    g2.gain.setValueAtTime(0.15,ac.currentTime);
-    g2.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+1.2);
+    o2.frequency.value=990;o2.type='sine';
+    g2.gain.setValueAtTime(0.0,ac.currentTime);
+    g2.gain.linearRampToValueAtTime(0.07,ac.currentTime+0.02);
+    g2.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+1.8);
     o.start();o2.start();
-    o.stop(ac.currentTime+1.8);o2.stop(ac.currentTime+1.2);
+    o.stop(ac.currentTime+2.5);o2.stop(ac.currentTime+1.8);
   }catch(e){}
 }
 
@@ -313,7 +314,22 @@ function addHeart(){
   hw.appendChild(h);
 }
 
-// ═══ NATURE SOUNDS ═══
+// ═══ WAKE LOCK — prevent screen sleep ═══
+let wakeLock = null;
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+    }
+  } catch(e) {}
+}
+function releaseWakeLock() {
+  if (wakeLock) { wakeLock.release(); wakeLock = null; }
+}
+// re-acquire if page becomes visible again
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && therapyOn) requestWakeLock();
+});
 let soundReady=false,forestAudio=null,birdsAudio=null;
 function initSounds(){
   if(soundReady)return;
@@ -405,7 +421,7 @@ loop();
 
 // ═══ REPORT ═══
 function endSession(){
-  stopSounds();therapyOn=false;
+  stopSounds();releaseWakeLock();therapyOn=false;
   document.getElementById('hud').classList.remove('on');
   document.getElementById('rms-badge').style.display='none';
   document.getElementById('timer-badge').style.display='none';
@@ -497,6 +513,7 @@ document.getElementById('reset-cal-btn').onclick=()=>{rmsMin=999;rmsMax=0;rmsSmo
 document.getElementById('start-btn').onclick=()=>{
   if(!autoRaf&&!connected){document.getElementById('auto-btn').textContent='⏹ עצור';document.getElementById('auto-btn').className='btn on';(function step(){relaxTarget+=autoDir*.0025;if(relaxTarget>=1){relaxTarget=1;autoDir=-1;}if(relaxTarget<=0){relaxTarget=0;autoDir=1;}autoRaf=requestAnimationFrame(step);})();}
   initSounds();
+  requestWakeLock();
   season=0;relaxTarget=0.05;birdY=0;
   therapyOn=true;
   document.getElementById('home').classList.add('out');
@@ -510,7 +527,7 @@ document.getElementById('start-btn').onclick=()=>{
 };
 
 document.getElementById('back-btn').onclick=()=>{
-  stopSessionTimer();stopSounds();therapyOn=false;
+  stopSessionTimer();stopSounds();releaseWakeLock();therapyOn=false;
   document.getElementById('home').style.visibility='';document.getElementById('home').classList.remove('out');
   document.getElementById('hud').classList.remove('on');
   document.getElementById('rms-badge').style.display='none';
