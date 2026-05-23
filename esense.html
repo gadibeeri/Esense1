@@ -407,15 +407,17 @@ let forestAudio=null, birdsAudio=null;
 function initSounds(){
   if(soundReady) return;
   try{
-    // Forest ambience — freesound via proxy CDN
-    forestAudio = new Audio('https://assets.mixkit.co/active_storage/sfx/2515/2515-preview.mp3');
+    // Forest with birds — Internet Archive, CC0 public domain
+    forestAudio = new Audio('https://archive.org/download/various-bird-sounds/forest-with-small-river-birds-and-nature-field-recording-6735.mp3');
     forestAudio.loop = true;
     forestAudio.volume = 0;
+    forestAudio.crossOrigin = 'anonymous';
 
-    // Birds chirping
-    birdsAudio = new Audio('https://assets.mixkit.co/active_storage/sfx/2518/2518-preview.mp3');
+    // Birds in forest spring — Internet Archive, CC0
+    birdsAudio = new Audio('https://archive.org/download/various-bird-sounds/forestbirdsspring-17910.mp3');
     birdsAudio.loop = true;
     birdsAudio.volume = 0;
+    birdsAudio.crossOrigin = 'anonymous';
 
     forestAudio.play().catch(()=>{});
     birdsAudio.play().catch(()=>{});
@@ -425,10 +427,8 @@ function initSounds(){
 
 function updateSounds(s){
   if(!soundReady) return;
-  // forest grows gently with relaxation
   if(forestAudio) forestAudio.volume = clamp(s * 0.55, 0, 0.55);
-  // birds layer comes in more from 30% relaxation onward
-  if(birdsAudio)  birdsAudio.volume  = clamp((s - 0.25) * 0.7, 0, 0.55);
+  if(birdsAudio)  birdsAudio.volume  = clamp((s - 0.2) * 0.65, 0, 0.55);
 }
 
 function stopSounds(){
