@@ -428,108 +428,202 @@ const STARS_SEA=Array.from({length:100},()=>({x:Math.random(),y:Math.random()*.6
 
 function drawSunset(s,t,ctx,W,H){
   ctx.clearRect(0,0,W,H);
-  const hZ=H*.45; // horizon
+  const hZ=H*.44;
 
-  // sky gradient — warm dusk→deep night
+  // ── SKY ──
+  // s=0: bright blue day
+  // s=0.4: golden/orange sunset
+  // s=0.7: deep red/purple dusk
+  // s=1.0: dark night navy
   const skyG=ctx.createLinearGradient(0,0,0,hZ);
-  // s=0: golden hour, s=1: deep night purple/navy
-  const topCol=lerpC('#1a0a35','#0a0520',s);
-  const horizCol=lerpC('#ff6030','#2a1545',s);
-  skyG.addColorStop(0,topCol);skyG.addColorStop(1,horizCol);
+  let topCol,midCol,horizCol;
+  if(s<0.35){
+    const t2=s/0.35;
+    topCol=lerpC('#1a6abf','#c84010',t2);
+    horizCol=lerpC('#5ab0ff','#ff8030',t2);
+  } else if(s<0.65){
+    const t2=(s-0.35)/0.3;
+    topCol=lerpC('#c84010','#6a1535',t2);
+    horizCol=lerpC('#ff8030','#c03520',t2);
+  } else {
+    const t2=(s-0.65)/0.35;
+    topCol=lerpC('#6a1535','#080414',t2);
+    horizCol=lerpC('#c03520','#1a0828',t2);
+  }
+  skyG.addColorStop(0,topCol);
+  skyG.addColorStop(0.6,lerpC(horizCol,topCol,0.4));
+  skyG.addColorStop(1,horizCol);
   ctx.fillStyle=skyG;ctx.fillRect(0,0,W,hZ);
 
-  // stars appear as sun sets
-  if(s>.25){
-    const sa=clamp((s-.25)/.4,0,1);
+  // ── SUN RAYS (day only, s<0.25) ──
+  if(s<0.25){
+    const ra=1-s/0.25;
+    const sunX=W*.5, sunY=lerp(hZ*.25,hZ*.12,s/0.25);
+    for(let r=0;r<12;r++){
+      const angle=(r/12)*Math.PI*2+t*.05;
+      const len=lerp(W*.08,W*.04,s/0.25);
+      const rayG=ctx.createLinearGradient(sunX,sunY,sunX+Math.cos(angle)*len,sunY+Math.sin(angle)*len);
+      rayG.addColorStop(0,`rgba(255,240,120,${ra*.18})`);
+      rayG.addColorStop(1,'rgba(255,240,120,0)');
+      ctx.strokeStyle=`rgba(255,240,120,${ra*.12})`;
+      ctx.lineWidth=lerp(6,2,r/12);
+      ctx.beginPath();ctx.moveTo(sunX+Math.cos(angle)*W*.025,sunY+Math.sin(angle)*W*.025);
+      ctx.lineTo(sunX+Math.cos(angle)*len,sunY+Math.sin(angle)*len);ctx.stroke();
+    }
+  }
+
+  // ── CLOUDS ──
+  const CLOUD_DATA=[
+    {x:.08,y:.12,r:0.10,speed:.0006,layers:3},
+    {x:.32,y:.18,r:0.08,speed:.0004,layers:2},
+    {x:.58,y:.08,r:0.12,speed:.0007,layers:3},
+    {x:.78,y:.22,r:0.07,speed:.0005,layers:2},
+    {x:.45,y:.32,r:0.09,speed:.0003,layers:2},
+  ];
+  CLOUD_DATA.forEach((cl,i)=>{
+    const cx=((cl.x+t*cl.speed)%1.2-.1)*W;
+    const cy=cl.y*hZ;
+    const cr=cl.r*W;
+    // color: white in day, orange/pink at sunset, dark at night
+    let cCol;
+    if(s<0.3) cCol=`rgba(240,245,255,${lerp(.75,.55,s/.3)})`;
+    else if(s<0.6){const t2=(s-.3)/.3;cCol=`rgba(${Math.round(lerp(240,220,t2))},${Math.round(lerp(180,100,t2))},${Math.round(lerp(120,60,t2))},${lerp(.55,.45,t2)})`;}
+    else{const t2=(s-.6)/.4;cCol=`rgba(${Math.round(lerp(120,30,t2))},${Math.round(lerp(60,15,t2))},${Math.round(lerp(50,25,t2))},${lerp(.45,.3,t2)})`;}
+    ctx.beginPath();
+    ctx.arc(cx,cy,cr,0,Math.PI*2);
+    ctx.arc(cx+cr*.65,cy+cr*.1,cr*.75,0,Math.PI*2);
+    ctx.arc(cx-cr*.55,cy+cr*.15,cr*.65,0,Math.PI*2);
+    if(cl.layers===3){ctx.arc(cx+cr*.25,cy-cr*.2,cr*.6,0,Math.PI*2);}
+    ctx.fillStyle=cCol;ctx.fill();
+    // cloud shadow bottom
+    ctx.beginPath();ctx.arc(cx,cy+cr*.2,cr*.9,0,Math.PI*2);
+    const shadowA=s<0.3?0.06:s<0.6?0.08:0.04;
+    ctx.fillStyle=`rgba(0,0,0,${shadowA})`;ctx.fill();
+  });
+
+  // ── STARS ──
+  if(s>0.45){
+    const sa=clamp((s-.45)/.3,0,1);
     STARS_SEA.forEach(st=>{
       const tw=.5+.5*Math.sin(t*1.5+st.ph);
-      ctx.beginPath();ctx.arc(st.x*W,st.y*hZ*.8,st.r,0,Math.PI*2);
-      ctx.fillStyle=`rgba(255,255,255,${sa*tw*.85})`;ctx.fill();
+      ctx.beginPath();ctx.arc(st.x*W,st.y*hZ*.85,st.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(255,255,255,${sa*tw*.9})`;ctx.fill();
     });
   }
 
-  // moon rises as sun sets
-  if(s>.5){
-    const ma=clamp((s-.5)/.3,0,1);
-    const moonY=lerp(hZ*.5,hZ*.15,clamp((s-.5)/.5,0,1));
-    ctx.beginPath();ctx.arc(W*.2,moonY,22*ma+10,0,Math.PI*2);
-    ctx.fillStyle=`rgba(220,225,240,${ma*.9})`;ctx.fill();
-    // moon glow
-    const mg=ctx.createRadialGradient(W*.2,moonY,10,W*.2,moonY,60*ma);
-    mg.addColorStop(0,`rgba(200,210,240,${ma*.15})`);mg.addColorStop(1,'rgba(200,210,240,0)');
-    ctx.fillStyle=mg;ctx.beginPath();ctx.arc(W*.2,moonY,60*ma,0,Math.PI*2);ctx.fill();
+  // ── MOON ──
+  if(s>.55){
+    const ma=clamp((s-.55)/.25,0,1);
+    const moonY=lerp(hZ*.55,hZ*.14,clamp((s-.55)/.45,0,1));
+    const mg=ctx.createRadialGradient(W*.18,moonY,8,W*.18,moonY,55*ma);
+    mg.addColorStop(0,`rgba(200,210,240,${ma*.12})`);mg.addColorStop(1,'rgba(200,210,240,0)');
+    ctx.fillStyle=mg;ctx.beginPath();ctx.arc(W*.18,moonY,55*ma,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(W*.18,moonY,20*ma+8,0,Math.PI*2);
+    ctx.fillStyle=`rgba(225,230,248,${ma*.92})`;ctx.fill();
   }
 
-  // sun — sinks below horizon
-  const sunPct=1-s; // 1=fully up, 0=set
-  const sunY=lerp(hZ+30,hZ*.3,sunPct); // rises from below horizon
-  const sunR=lerp(0,36,Math.min(sunPct*3,1));
-  const sunVisible=sunY<hZ+sunR;
-  if(sunVisible&&sunR>0){
-    // glow
-    const glow=ctx.createRadialGradient(W*.5,sunY,0,W*.5,sunY,sunR*5);
-    glow.addColorStop(0,`rgba(255,160,40,${sunPct*.5})`);glow.addColorStop(.4,`rgba(255,80,20,${sunPct*.2})`);glow.addColorStop(1,'rgba(255,80,20,0)');
-    ctx.fillStyle=glow;ctx.beginPath();ctx.arc(W*.5,sunY,sunR*5,0,Math.PI*2);ctx.fill();
-    // sun disc clipped at horizon
+  // ── SUN — coin sinking ──
+  // s=0: high in sky, large, bright yellow-white
+  // s=0.5: at horizon, orange coin
+  // s=0.75: half below horizon
+  // s=0.88+: gone
+  const sunVisible=s<0.88;
+  if(sunVisible){
+    const sp=s/0.88; // 0→1 as sun sets
+    const sunX=W*.5;
+    // sun descends from hZ*0.15 to hZ+sunR (below horizon)
+    const sunR=lerp(W*.052,W*.038,sp); // shrinks slightly = "coin" effect
+    const sunY=lerp(hZ*.15,hZ+sunR*1.1,sp);
+
+    // corona/glow — large in day, tight orange at sunset
+    const glowR=lerp(sunR*5,sunR*3.5,sp);
+    const glowA=lerp(.25,.45,clamp(sp*2-.2,0,1))*(1-clamp((sp-.8)/.2,0,1));
+    const glow=ctx.createRadialGradient(sunX,sunY,sunR*.5,sunX,sunY,glowR);
+    const glowCol=sp<.5?`rgba(255,240,100,${glowA})`:`rgba(255,${Math.round(lerp(160,60,sp-.5))},20,${glowA})`;
+    glow.addColorStop(0,glowCol);glow.addColorStop(1,'rgba(255,100,20,0)');
+    ctx.fillStyle=glow;ctx.beginPath();ctx.arc(sunX,sunY,glowR,0,Math.PI*2);ctx.fill();
+
+    // sun disc — clipped at horizon
     ctx.save();ctx.beginPath();ctx.rect(0,0,W,hZ);ctx.clip();
-    ctx.beginPath();ctx.arc(W*.5,sunY,sunR,0,Math.PI*2);
-    ctx.fillStyle=`rgba(255,${Math.round(lerp(200,100,s))},${Math.round(lerp(50,20,s))},1)`;ctx.fill();
+    ctx.beginPath();ctx.arc(sunX,sunY,sunR,0,Math.PI*2);
+    // color: white-yellow → deep orange → red coin
+    const sr=255,sg=Math.round(lerp(240,80,sp)),sb=Math.round(lerp(180,10,sp));
+    ctx.fillStyle=`rgb(${sr},${sg},${sb})`;ctx.fill();
+    // coin shine at top
+    ctx.beginPath();ctx.arc(sunX-sunR*.2,sunY-sunR*.25,sunR*.3,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,255,220,${lerp(.35,.08,sp)})`;ctx.fill();
     ctx.restore();
-    // sun reflection on water
-    const refH=lerp(0,H*.12,sunPct);
-    const refG=ctx.createLinearGradient(0,hZ,0,hZ+refH);
-    refG.addColorStop(0,`rgba(255,120,30,${sunPct*.6})`);refG.addColorStop(1,'rgba(255,120,30,0)');
-    ctx.fillStyle=refG;ctx.fillRect(W*.4,hZ,W*.2,refH);
+
+    // horizon glow band
+    const hgA=clamp(sp*1.5-.1,0,1)*(1-clamp((sp-.85)/.15,0,1));
+    const hg=ctx.createLinearGradient(0,hZ-H*.08,0,hZ+H*.04);
+    hg.addColorStop(0,'rgba(255,80,10,0)');
+    hg.addColorStop(.5,`rgba(255,${Math.round(lerp(160,50,sp))},10,${hgA*.55})`);
+    hg.addColorStop(1,'rgba(255,60,10,0)');
+    ctx.fillStyle=hg;ctx.fillRect(0,hZ-H*.08,W,H*.12);
+
+    // reflection on water — vertical streak
+    if(sp>.05){
+      const refA=clamp(sp*1.2,0,1)*(1-clamp((sp-.8)/.2,0,1));
+      const refW=lerp(W*.04,W*.025,sp);
+      const refG=ctx.createLinearGradient(sunX,hZ,sunX,H*.75);
+      refG.addColorStop(0,`rgba(255,${sg},${sb},${refA*.7})`);
+      refG.addColorStop(.4,`rgba(255,${sg},${sb},${refA*.3})`);
+      refG.addColorStop(1,'rgba(255,80,10,0)');
+      ctx.fillStyle=refG;
+      ctx.beginPath();ctx.moveTo(sunX-refW,hZ);ctx.lineTo(sunX+refW,hZ);
+      ctx.lineTo(sunX+refW*1.8,H*.75);ctx.lineTo(sunX-refW*1.8,H*.75);ctx.fill();
+    }
   }
 
-  // horizon glow
-  const hg=ctx.createLinearGradient(0,hZ-30,0,hZ+10);
-  hg.addColorStop(0,`rgba(255,${Math.round(lerp(120,40,s))},20,${lerp(.4,.05,s)})`);
-  hg.addColorStop(1,'rgba(255,80,20,0)');
-  ctx.fillStyle=hg;ctx.fillRect(0,hZ-30,W,40);
-
-  // SEA
+  // ── SEA ──
   const seaG=ctx.createLinearGradient(0,hZ,0,H);
-  seaG.addColorStop(0,lerpC('#1a3a6a','#060e22',s));
-  seaG.addColorStop(1,lerpC('#0a1a3a','#02060f',s));
+  seaG.addColorStop(0,lerpC('#2060a0','#060e22',s));
+  seaG.addColorStop(1,lerpC('#0e2850','#02060f',s));
   ctx.fillStyle=seaG;ctx.fillRect(0,hZ,W,H-hZ);
 
-  // waves — gentle, slower as more relaxed
-  waveOff+=lerp(0.8,0.25,s);
-  const waveCount=5;
-  for(let w=0;w<waveCount;w++){
-    const wy=hZ+H*.04+(w/waveCount)*(H-hZ)*.85;
-    const amp=lerp(4,1.2,s)*(1-w/waveCount*.5);
-    const wLen=W*.4+w*W*.08;
-    const alpha=lerp(.35,.15,s)*(1-w/waveCount*.4);
+  // ── WAVES ──
+  waveOff+=lerp(0.8,0.2,s);
+  for(let w=0;w<5;w++){
+    const wy=hZ+H*.03+(w/5)*(H-hZ)*.88;
+    const amp=lerp(5,1.2,s)*(1-w/5*.4);
+    const wLen=W*.35+w*W*.09;
+    const alpha=lerp(.4,.12,s)*(1-w/5*.35);
     ctx.beginPath();ctx.moveTo(0,wy);
-    for(let x=0;x<=W;x+=4){
-      const y=wy+Math.sin((x/wLen+waveOff*.01+w*.3)*Math.PI*2)*amp+Math.sin((x/wLen*.7+waveOff*.007)*Math.PI*2)*amp*.4;
+    for(let x=0;x<=W;x+=3){
+      const y=wy+Math.sin((x/wLen+waveOff*.01+w*.3)*Math.PI*2)*amp
+               +Math.sin((x/wLen*.6+waveOff*.007)*Math.PI*2)*amp*.35;
       ctx.lineTo(x,y);
     }
-    ctx.strokeStyle=`rgba(${lerpC('#4a8aaa','#1a3a5a',s).slice(4,-1)},${alpha})`;
-    ctx.lineWidth=1+w*.3;ctx.stroke();
+    ctx.strokeStyle=lerpC('#6aaac8','#1a3a5a',s);
+    ctx.globalAlpha=alpha;ctx.lineWidth=1+w*.25;ctx.stroke();ctx.globalAlpha=1;
   }
 
-  // moonlight shimmer on water
-  if(s>.4){
-    const ma=clamp((s-.4)/.3,0,1);
-    const shimG=ctx.createLinearGradient(W*.4,hZ,W*.6,H);
-    shimG.addColorStop(0,`rgba(180,190,220,${ma*.18})`);shimG.addColorStop(1,'rgba(180,190,220,0)');
+  // ── MOONLIGHT SHIMMER ──
+  if(s>.5){
+    const ma=clamp((s-.5)/.3,0,1);
+    const shimG=ctx.createLinearGradient(W*.42,hZ,W*.58,H);
+    shimG.addColorStop(0,`rgba(180,195,230,${ma*.2})`);shimG.addColorStop(1,'rgba(180,195,230,0)');
     ctx.fillStyle=shimG;
-    ctx.beginPath();ctx.moveTo(W*.47,hZ);ctx.lineTo(W*.53,hZ);ctx.lineTo(W*.62,H);ctx.lineTo(W*.38,H);ctx.fill();
+    ctx.beginPath();ctx.moveTo(W*.46,hZ);ctx.lineTo(W*.54,hZ);ctx.lineTo(W*.64,H);ctx.lineTo(W*.36,H);ctx.fill();
   }
 
-  // silhouette: distant boat
-  if(s>.1){
-    const bx=W*.15+Math.sin(t*.1)*W*.005;
-    const by=hZ+H*.02;
-    const ba=clamp((s-.1)/.3,0,1);
-    ctx.fillStyle=`rgba(10,15,30,${ba*.9})`;
-    ctx.beginPath();ctx.moveTo(bx-W*.04,by+H*.012);ctx.lineTo(bx+W*.04,by+H*.012);ctx.lineTo(bx+W*.03,by);ctx.lineTo(bx-W*.03,by);ctx.fill();
-    // mast
-    ctx.strokeStyle=`rgba(10,15,30,${ba*.9})`;ctx.lineWidth=1.5;
-    ctx.beginPath();ctx.moveTo(bx,by);ctx.lineTo(bx,by-H*.04);ctx.stroke();
+  // ── BOAT SILHOUETTE ──
+  if(s>.08){
+    const bx=W*.14+Math.sin(t*.08)*W*.004;
+    const by=hZ+H*.018;
+    const ba=clamp((s-.08)/.25,0,1);
+    ctx.fillStyle=`rgba(8,12,25,${ba*.92})`;
+    ctx.beginPath();ctx.moveTo(bx-W*.042,by+H*.013);ctx.lineTo(bx+W*.042,by+H*.013);
+    ctx.lineTo(bx+W*.032,by);ctx.lineTo(bx-W*.032,by);ctx.fill();
+    ctx.strokeStyle=`rgba(8,12,25,${ba*.92})`;ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(bx,by);ctx.lineTo(bx,by-H*.042);ctx.stroke();
+    // sail
+    if(s<.6){
+      const sa2=1-s/.6;
+      ctx.beginPath();ctx.moveTo(bx,by-H*.042);ctx.lineTo(bx+W*.024,by-H*.01);ctx.lineTo(bx,by-H*.005);ctx.fill();
+      ctx.globalAlpha=sa2*.4;ctx.fill();ctx.globalAlpha=1;
+    }
   }
 }
 
@@ -630,15 +724,17 @@ function stopSounds(){
 function playBell(){
   try{
     const ac=new(window.AudioContext||window.webkitAudioContext)();
-    const o=ac.createOscillator(),g=ac.createGain();
-    o.connect(g);g.connect(ac.destination);o.frequency.value=660;o.type='sine';
-    g.gain.setValueAtTime(0,ac.currentTime);g.gain.linearRampToValueAtTime(0.18,ac.currentTime+.03);
-    g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+2.5);
-    const o2=ac.createOscillator(),g2=ac.createGain();
-    o2.connect(g2);g2.connect(ac.destination);o2.frequency.value=990;o2.type='sine';
-    g2.gain.setValueAtTime(0,ac.currentTime);g2.gain.linearRampToValueAtTime(0.07,ac.currentTime+.02);
-    g2.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+1.8);
-    o.start();o2.start();o.stop(ac.currentTime+2.5);o2.stop(ac.currentTime+1.8);
+    // Mario coin: two quick high tones
+    [[1400,0,0.08],[1800,0.06,0.12]].forEach(([freq,delay,dur])=>{
+      const o=ac.createOscillator(),g=ac.createGain();
+      o.connect(g);g.connect(ac.destination);
+      o.type='square';o.frequency.value=freq;
+      g.gain.setValueAtTime(0,ac.currentTime+delay);
+      g.gain.linearRampToValueAtTime(0.09,ac.currentTime+delay+0.01);
+      g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+delay+dur);
+      o.start(ac.currentTime+delay);
+      o.stop(ac.currentTime+delay+dur+0.01);
+    });
   }catch(e){}
 }
 
