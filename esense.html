@@ -488,21 +488,17 @@ function drawSunset(s,t,ctx,W,H){
     const cx=((cl.x+t*cl.speed)%1.2-.1)*W;
     const cy=cl.y*hZ;
     const cr=cl.r*W;
-    // color: white in day, orange/pink at sunset, dark at night
     let cCol;
     if(s<0.3) cCol=`rgba(240,245,255,${lerp(.75,.55,s/.3)})`;
     else if(s<0.6){const t2=(s-.3)/.3;cCol=`rgba(${Math.round(lerp(240,220,t2))},${Math.round(lerp(180,100,t2))},${Math.round(lerp(120,60,t2))},${lerp(.55,.45,t2)})`;}
     else{const t2=(s-.6)/.4;cCol=`rgba(${Math.round(lerp(120,30,t2))},${Math.round(lerp(60,15,t2))},${Math.round(lerp(50,25,t2))},${lerp(.45,.3,t2)})`;}
-    ctx.beginPath();
-    ctx.arc(cx,cy,cr,0,Math.PI*2);
-    ctx.arc(cx+cr*.65,cy+cr*.1,cr*.75,0,Math.PI*2);
-    ctx.arc(cx-cr*.55,cy+cr*.15,cr*.65,0,Math.PI*2);
-    if(cl.layers===3){ctx.arc(cx+cr*.25,cy-cr*.2,cr*.6,0,Math.PI*2);}
-    ctx.fillStyle=cCol;ctx.fill();
-    // cloud shadow bottom
-    ctx.beginPath();ctx.arc(cx,cy+cr*.2,cr*.9,0,Math.PI*2);
-    const shadowA=s<0.3?0.06:s<0.6?0.08:0.04;
-    ctx.fillStyle=`rgba(0,0,0,${shadowA})`;ctx.fill();
+    // draw each bubble separately
+    [[cx,cy,cr],[cx+cr*.65,cy+cr*.1,cr*.75],[cx-cr*.55,cy+cr*.15,cr*.65]].forEach(([bx,by,br])=>{
+      ctx.beginPath();ctx.arc(bx,by,br,0,Math.PI*2);ctx.fillStyle=cCol;ctx.fill();
+    });
+    if(cl.layers===3){
+      ctx.beginPath();ctx.arc(cx+cr*.25,cy-cr*.2,cr*.6,0,Math.PI*2);ctx.fillStyle=cCol;ctx.fill();
+    }
   });
 
   // ── STARS ──
