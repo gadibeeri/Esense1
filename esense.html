@@ -810,7 +810,19 @@ function loop(){
   if(!cvBg.width||!cvBg.height) setSize();
   if(currentScene==='forest'){drawForest(season,t,ctxBg,W,H);drawBird(season,t);}
   else if(currentScene==='seed'){drawSeed(season,t,ctxBg,W,H);ctxBird.clearRect(0,0,W,H);}
-  else if(currentScene==='sunset'){drawSunset(season,t,ctxBg,W,H);ctxBird.clearRect(0,0,W,H);}
+  else if(currentScene==='sunset'){
+    try{
+      drawSunset(season,t,ctxBg,W,H);
+    }catch(e){
+      // fallback: draw simple blue→orange sky so screen isn't black
+      ctxBg.clearRect(0,0,W,H);
+      const g=ctxBg.createLinearGradient(0,0,0,H);
+      g.addColorStop(0,'#1a6abf');g.addColorStop(1,'#ff8030');
+      ctxBg.fillStyle=g;ctxBg.fillRect(0,0,W,H);
+      document.getElementById('scene-lbl').textContent='⚠️ '+e.message.slice(0,40);
+    }
+    ctxBird.clearRect(0,0,W,H);
+  }
 
   updateSounds(season);
 
@@ -897,6 +909,7 @@ document.getElementById('devsel').onchange=async function(){
 // ═══ SCENE SELECT ═══
 function selectScene(sc){
   currentScene=sc;
+  console.log('Scene selected:',sc);
   document.querySelectorAll('.scene-card').forEach(c=>c.classList.remove('sel'));
   document.querySelector(`[data-scene="${sc}"]`).classList.add('sel');
 }
