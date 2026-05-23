@@ -595,8 +595,10 @@ function drawSunset(s,t,ctx,W,H){
                +Math.sin((x/wLen*.6+waveOff*.007)*Math.PI*2)*amp*.35;
       ctx.lineTo(x,y);
     }
+    ctx.save();
     ctx.strokeStyle=lerpC('#6aaac8','#1a3a5a',s);
-    ctx.globalAlpha=alpha;ctx.lineWidth=1+w*.25;ctx.stroke();ctx.globalAlpha=1;
+    ctx.globalAlpha=alpha;ctx.lineWidth=1+w*.25;ctx.stroke();
+    ctx.restore();
   }
 
   // ── MOONLIGHT SHIMMER ──
@@ -621,8 +623,11 @@ function drawSunset(s,t,ctx,W,H){
     // sail
     if(s<.6){
       const sa2=1-s/.6;
-      ctx.beginPath();ctx.moveTo(bx,by-H*.042);ctx.lineTo(bx+W*.024,by-H*.01);ctx.lineTo(bx,by-H*.005);ctx.fill();
-      ctx.globalAlpha=sa2*.4;ctx.fill();ctx.globalAlpha=1;
+      ctx.save();
+      ctx.globalAlpha=sa2*.4;
+      ctx.beginPath();ctx.moveTo(bx,by-H*.042);ctx.lineTo(bx+W*.024,by-H*.01);ctx.lineTo(bx,by-H*.005);
+      ctx.fillStyle=`rgba(8,12,25,0.9)`;ctx.fill();
+      ctx.restore();
     }
   }
 }
