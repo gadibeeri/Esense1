@@ -339,12 +339,15 @@ function drawBird(s,t){
   if(!therapyOn)return;
 
   birdY=lerp(birdY,s,.024);
-  wing+=lerp(4.5,1.9,birdY)*.016;
-  const wA=Math.sin(wing)*lerp(.72,.27,birdY);
+  // relaxed = faster flap, stressed = slower (inverted from before)
+  wing+=lerp(2.2,5.8,birdY)*.016;
+  const wA=Math.sin(wing)*lerp(.35,.75,birdY);
 
   const bX=W*.24;
-  const bYpos=lerp(H*.74,H*.13,birdY)+Math.sin(t*.9)*H*.007;
-  const sz=lerp(W*.108,W*.084,birdY);
+  // more vertical range: 80% → 10%
+  const bYpos=lerp(H*.80,H*.10,birdY)+Math.sin(t*.9)*H*.007;
+  // smaller bird
+  const sz=lerp(W*.082,W*.065,birdY);
   const col=`rgb(${Math.round(lerp(226,255,s))},${Math.round(lerp(230,248,s))},${Math.round(lerp(242,234,s))})`;
 
   ctxBird.save();
@@ -396,8 +399,103 @@ function drawBird(s,t){
 }
 
 // ═══════════════════════════════════
-//  MAIN LOOP — always running
+//  NATURE SOUNDS
 // ═══════════════════════════════════
+let soundCtx=null, masterGain=null, soundReady=false;
+let rainNode=null, rainGain=null;
+let windNode=null, windGain=null;
+let birdNodes=[], birdInterval=null;
+
+function initSounds(){
+  if(soundReady) return;
+  try{
+    soundCtx = new(window.AudioContext||window.webkitAudioContext)();
+    masterGain = soundCtx.createGain();
+    masterGain.gain.setValueAtTime(0, soundCtx.currentTime);
+    masterGain.connect(soundCtx.destination);
+
+    // Rain — white noise filtered
+    const bufLen = soundCtx.sampleRate * 2;
+    const rainBuf = soundCtx.createBuffer(1, bufLen, soundCtx.sampleRate);
+    const data = rainBuf.getChannelData(0);
+    for(let i=0;i<bufLen;i++) data[i]=(Math.random()*2-1);
+    rainNode = soundCtx.createBufferSource();
+    rainNode.buffer = rainBuf;
+    rainNode.loop = true;
+    const rainFilter = soundCtx.createBiquadFilter();
+    rainFilter.type = 'bandpass';
+    rainFilter.frequency.value = 1200;
+    rainFilter.Q.value = 0.4;
+    rainGain = soundCtx.createGain();
+    rainGain.gain.value = 0.18;
+    rainNode.connect(rainFilter);
+    rainFilter.connect(rainGain);
+    rainGain.connect(masterGain);
+    rainNode.start();
+
+    // Wind — low filtered noise
+    const windBuf = soundCtx.createBuffer(1, bufLen, soundCtx.sampleRate);
+    const wd = windBuf.getChannelData(0);
+    for(let i=0;i<bufLen;i++) wd[i]=(Math.random()*2-1);
+    windNode = soundCtx.createBufferSource();
+    windNode.buffer = windBuf;
+    windNode.loop = true;
+    const windFilter = soundCtx.createBiquadFilter();
+    windFilter.type = 'lowpass';
+    windFilter.frequency.value = 300;
+    windGain = soundCtx.createGain();
+    windGain.gain.value = 0.12;
+    windNode.connect(windFilter);
+    windFilter.connect(windGain);
+    windGain.connect(masterGain);
+    windNode.start();
+
+    soundReady = true;
+  } catch(e){ console.log('Sound error:', e); }
+}
+
+function playBirdChirp(){
+  if(!soundReady||!soundCtx) return;
+  const g = soundCtx.createGain();
+  g.gain.setValueAtTime(0.18, soundCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, soundCtx.currentTime+0.4);
+  g.connect(masterGain);
+
+  // two oscillators for richer chirp
+  [880, 1320].forEach((freq,i)=>{
+    const o = soundCtx.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(freq, soundCtx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(freq*1.4, soundCtx.currentTime+0.08);
+    o.frequency.exponentialRampToValueAtTime(freq*0.9, soundCtx.currentTime+0.25);
+    o.connect(g);
+    o.start(soundCtx.currentTime + i*0.04);
+    o.stop(soundCtx.currentTime + 0.4);
+  });
+}
+
+function updateSounds(s){
+  if(!soundReady||!masterGain) return;
+  // master volume grows with relaxation
+  const vol = s * 0.7;
+  masterGain.gain.linearRampToValueAtTime(vol, soundCtx.currentTime+2.0);
+
+  // rain fades as spring comes, wind stays gentle
+  if(rainGain) rainGain.gain.linearRampToValueAtTime(lerp(0.18,0.04,s), soundCtx.currentTime+3.0);
+  if(windGain) windGain.gain.linearRampToValueAtTime(lerp(0.08,0.14,s), soundCtx.currentTime+3.0);
+
+  // bird chirps — more frequent as more relaxed
+  if(birdInterval) clearInterval(birdInterval);
+  if(s > 0.15){
+    const freq = lerp(8000, 2000, s); // ms between chirps
+    birdInterval = setInterval(playBirdChirp, freq);
+  }
+}
+
+function stopSounds(){
+  if(birdInterval){ clearInterval(birdInterval); birdInterval=null; }
+  if(masterGain) masterGain.gain.linearRampToValueAtTime(0, soundCtx.currentTime+1.5);
+}
 const t0=performance.now();
 function loop(){
   rafId=requestAnimationFrame(loop);
@@ -441,6 +539,7 @@ function loop(){
 
   drawScene(season,t);
   drawBird(season,t);
+  updateSounds(season);
 
   // HUD
   const pct=Math.round(season*100);
@@ -536,6 +635,7 @@ document.getElementById('start-btn').onclick=()=>{
     document.getElementById('auto-btn').className='btn on';
     (function step(){relaxTarget+=autoDir*.0025;if(relaxTarget>=1){relaxTarget=1;autoDir=-1;}if(relaxTarget<=0){relaxTarget=0;autoDir=1;}autoRaf=requestAnimationFrame(step);})();
   }
+  initSounds();
   therapyOn=true;
   document.getElementById('home').classList.add('out');
   document.getElementById('hud').classList.add('on');
@@ -546,6 +646,7 @@ document.getElementById('start-btn').onclick=()=>{
 
 document.getElementById('back-btn').onclick=()=>{
   therapyOn=false;
+  stopSounds();
   document.getElementById('home').style.visibility='';
   document.getElementById('home').classList.remove('out');
   document.getElementById('hud').classList.remove('on');
