@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#06080f">
+<title>יומן קולי</title>
+<link rel="manifest" href="data:application/json,{%22name%22:%22יומן קולי%22,%22display%22:%22standalone%22,%22background_color%22:%22%2306080f%22}">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,sans-serif;direction:rtl;background:#06080f;color:#fff}
+
+/* SCREENS */
+.screen{position:fixed;inset:0;display:none;flex-direction:column;overflow-y:auto}
+.screen.on{display:flex}
+
+/* ── HOME ── */
+#s-home{background:linear-gradient(160deg,#06090f,#0c1828);padding:max(44px,env(safe-area-inset-top)) 0 28px}
+.home-inner{padding:0 20px;display:flex;flex-direction:column;gap:16px;flex:1}
+.app-title{font-size:clamp(1.8rem,7vw,2.4rem);font-weight:300;line-height:1.1;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,.07)}
+.app-title em{font-style:italic;color:rgba(150,205,255,.7)}
+.app-sub{font-size:13px;color:rgba(255,255,255,.36);line-height:1.6}
+.today-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:16px;overflow:hidden}
+.today-header{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;justify-content:space-between}
+.today-date{font-size:13px;color:rgba(255,255,255,.5)}
+.today-count{font-size:13px;color:rgba(150,205,255,.7)}
+.task-list{padding:8px 0}
+.task-item{padding:10px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.04)}
+.task-item:last-child{border-bottom:none}
+.task-check{width:20px;height:20px;border-radius:50%;border:1.5px solid rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .2s}
+.task-check.done{background:#4ecb71;border-color:#4ecb71}
+.task-text{font-size:14px;color:rgba(255,255,255,.82);flex:1;line-height:1.4}
+.task-text.done{text-decoration:line-through;color:rgba(255,255,255,.35)}
+.task-del{color:rgba(255,255,255,.2);font-size:18px;cursor:pointer;padding:0 4px}
+.empty-state{padding:24px 16px;text-align:center;font-size:13px;color:rgba(255,255,255,.28);line-height:1.7}
+.fab{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,rgba(65,145,215,.5),rgba(30,105,170,.4));border:1px solid rgba(90,170,255,.3);color:#fff;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;position:fixed;left:20px;bottom:max(24px,env(safe-area-inset-bottom,24px));z-index:20;box-shadow:0 4px 20px rgba(65,145,215,.25)}
+.chat-btn{width:100%;padding:16px;border-radius:14px;background:linear-gradient(135deg,rgba(65,145,215,.24),rgba(30,105,170,.16));border:1px solid rgba(90,170,255,.25);color:#fff;font-size:16px;font-style:italic;letter-spacing:.04em;cursor:pointer}
+.notif-btn{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:rgba(255,255,255,.6);font-size:13px;cursor:pointer}
+.notif-btn.on{background:rgba(78,203,113,.1);border-color:rgba(78,203,113,.3);color:#9de0a8}
+.time-row{display:flex;align-items:center;gap:10px;padding:12px 16px}
+.time-lbl{font-size:12px;color:rgba(255,255,255,.35)}
+input[type=time]{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#fff;padding:7px 10px;font-size:14px;outline:none;flex:1}
+.section-lbl{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.25);margin-bottom:8px;padding-right:2px}
+
+/* upcoming tasks */
+.upcoming-group{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;overflow:hidden}
+.upcoming-day{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.05);display:flex;align-items:center;justify-content:space-between}
+.upcoming-day-lbl{font-size:12px;color:rgba(255,255,255,.5)}
+.upcoming-task{padding:8px 14px;font-size:13px;color:rgba(255,255,255,.7);border-bottom:1px solid rgba(255,255,255,.04)}
+.upcoming-task:last-child{border-bottom:none}
+
+/* ── CHAT SCREEN ── */
+#s-chat{background:#06080f;padding:max(44px,env(safe-area-inset-top)) 0 0}
+#chat-header{padding:0 16px 14px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:12px;flex-shrink:0}
+#chat-back{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.7);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+#chat-title{font-size:15px;color:#fff;flex:1}
+#chat-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:82%;padding:11px 14px;border-radius:16px;font-size:14px;line-height:1.55}
+.msg.ai{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.88);align-self:flex-start;border-radius:4px 16px 16px 16px}
+.msg.user{background:rgba(65,145,215,.25);border:1px solid rgba(65,145,215,.3);color:#fff;align-self:flex-end;border-radius:16px 4px 16px 16px}
+.msg.typing{opacity:.6}
+#chat-input-area{padding:12px 16px max(20px,env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,.07);display:flex;gap:10px;align-items:flex-end;flex-shrink:0;background:#06080f}
+#chat-input{flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#fff;padding:10px 13px;font-size:14px;outline:none;resize:none;min-height:42px;max-height:100px;font-family:inherit}
+#mic-btn{width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#fff;font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s}
+#mic-btn.listening{background:rgba(220,80,80,.2);border-color:rgba(220,80,80,.4);animation:micPulse 1s infinite}
+@keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(220,80,80,.3)}50%{box-shadow:0 0 0 8px rgba(220,80,80,0)}}
+#send-btn{width:42px;height:42px;border-radius:50%;background:rgba(65,145,215,.3);border:1px solid rgba(65,145,215,.4);color:#fff;font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+
+/* speaking indicator */
+#speaking-badge{position:fixed;top:max(56px,env(safe-area-inset-top,56px));left:50%;transform:translateX(-50%);z-index:30;background:rgba(65,145,215,.25);border:1px solid rgba(65,145,215,.35);border-radius:20px;padding:5px 14px;font-size:12px;color:rgba(150,200,255,.9);display:none}
+#speaking-badge.on{display:block}
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<div class="screen on" id="s-home">
+<div class="home-inner">
+  <div>
+    <div style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.25);margin-bottom:8px">יומן קולי חכם</div>
+    <div class="app-title">המשימות <em>שלי</em></div>
+    <div class="app-sub" id="home-date"></div>
+  </div>
+
+  <!-- today -->
+  <div>
+    <div class="section-lbl">היום</div>
+    <div class="today-card">
+      <div class="today-header">
+        <div class="today-date" id="today-label">טוען...</div>
+        <div class="today-count" id="today-count"></div>
+      </div>
+      <div class="task-list" id="today-list">
+        <div class="empty-state">אין משימות להיום<br>לחץ על הצ'אט כדי להוסיף 🎙</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- upcoming -->
+  <div id="upcoming-wrap" style="display:none">
+    <div class="section-lbl">ימים קרובים</div>
+    <div class="upcoming-group" id="upcoming-list"></div>
+  </div>
+
+  <!-- notifications -->
+  <div>
+    <div class="section-lbl">תזכורת בוקר</div>
+    <div class="today-card">
+      <div class="time-row">
+        <span class="time-lbl">שעת תזכורת</span>
+        <input type="time" id="notif-time" value="08:00">
+      </div>
+      <div style="padding:0 16px 12px">
+        <button class="notif-btn" id="notif-btn">🔔 הפעל תזכורת בוקר</button>
+      </div>
+    </div>
+  </div>
+
+  <button class="chat-btn" id="open-chat-btn">🎙 פתח צ'אט קולי</button>
+  <div style="height:8px"></div>
+</div>
+</div>
+
+<!-- CHAT -->
+<div class="screen" id="s-chat">
+  <div id="chat-header">
+    <button id="chat-back">←</button>
+    <div id="chat-title">🎙 צ'אט קולי</div>
+  </div>
+  <div id="chat-msgs"></div>
+  <div id="chat-input-area">
+    <textarea id="chat-input" placeholder="כתוב או דבר..."></textarea>
+    <button id="mic-btn" title="דבר">🎤</button>
+    <button id="send-btn">↑</button>
+  </div>
+</div>
+
+<div id="speaking-badge">🔊 מדבר...</div>
+
+<script>
+// ═══ STORAGE ═══
+function load(k,def){try{return JSON.parse(localStorage.getItem(k))??def;}catch{return def;}}
+function save(k,v){localStorage.setItem(k,JSON.stringify(v));}
+
+// tasks: [{id, text, date:'YYYY-MM-DD', done:bool}]
+let tasks = load('tasks', []);
+
+// ═══ DATE HELPERS ═══
+function todayStr(){return new Date().toISOString().slice(0,10);}
+function fmtDate(str){
+  const d=new Date(str+'T12:00:00');
+  return d.toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long'});
+}
+function dayLabel(str){
+  const today=todayStr();
+  const tom=new Date();tom.setDate(tom.getDate()+1);
+  const tomStr=tom.toISOString().slice(0,10);
+  if(str===today)return'היום';
+  if(str===tomStr)return'מחר';
+  return fmtDate(str);
+}
+
+// ═══ RENDER HOME ═══
+function renderHome(){
+  const today=todayStr();
+  document.getElementById('home-date').textContent=fmtDate(today);
+  document.getElementById('today-label').textContent=fmtDate(today);
+
+  const todayTasks=tasks.filter(t=>t.date===today);
+  const done=todayTasks.filter(t=>t.done).length;
+  document.getElementById('today-count').textContent=todayTasks.length?`${done}/${todayTasks.length} הושלמו`:'';
+
+  const list=document.getElementById('today-list');
+  if(!todayTasks.length){
+    list.innerHTML='<div class="empty-state">אין משימות להיום<br>לחץ על הצ\'אט כדי להוסיף 🎙</div>';
+  } else {
+    list.innerHTML=todayTasks.map(t=>`
+      <div class="task-item">
+        <div class="task-check ${t.done?'done':''}" onclick="toggleTask('${t.id}')">${t.done?'✓':''}</div>
+        <div class="task-text ${t.done?'done':''}">${t.text}</div>
+        <div class="task-del" onclick="delTask('${t.id}')">×</div>
+      </div>`).join('');
+  }
+
+  // upcoming (next 7 days, excluding today)
+  const upcoming={};
+  tasks.filter(t=>t.date>today).forEach(t=>{
+    if(!upcoming[t.date])upcoming[t.date]=[];
+    upcoming[t.date].push(t);
+  });
+  const days=Object.keys(upcoming).sort().slice(0,5);
+  const upWrap=document.getElementById('upcoming-wrap');
+  if(!days.length){upWrap.style.display='none';return;}
+  upWrap.style.display='block';
+  document.getElementById('upcoming-list').innerHTML=days.map(d=>
+    `<div class="upcoming-day"><span class="upcoming-day-lbl">${dayLabel(d)}</span><span style="font-size:11px;color:rgba(255,255,255,.25)">${upcoming[d].length} משימות</span></div>`+
+    upcoming[d].map(t=>`<div class="upcoming-task">${t.done?'✓ ':''} ${t.text}</div>`).join('')
+  ).join('');
+}
+
+function toggleTask(id){
+  const t=tasks.find(t=>t.id===id);if(t)t.done=!t.done;
+  save('tasks',tasks);renderHome();
+}
+function delTask(id){
+  tasks=tasks.filter(t=>t.id!==id);save('tasks',tasks);renderHome();
+}
+function addTask(text,date){
+  date=date||todayStr();
+  tasks.push({id:Date.now()+'',text,date,done:false});
+  save('tasks',tasks);renderHome();
+}
+
+// ═══ SCREEN NAV ═══
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));document.getElementById(id).classList.add('on');}
+document.getElementById('open-chat-btn').onclick=()=>{show('s-chat');startMorningChat();};
+document.getElementById('chat-back').onclick=()=>{show('s-home');stopSpeech();};
+
+// ═══ SPEECH SYNTHESIS ═══
+let speaking=false;
+function speak(text,onDone){
+  stopSpeech();
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang='en-US';u.rate=0.95;u.pitch=1;
+  // try to find Hebrew voice
+  const voices=speechSynthesis.getVoices();
+  const hev=voices.find(v=>v.lang.startsWith('he'));
+  if(hev)u.voice=hev;
+  u.onstart=()=>{speaking=true;document.getElementById('speaking-badge').classList.add('on');};
+  u.onend=u.onerror=()=>{speaking=false;document.getElementById('speaking-badge').classList.remove('on');if(onDone)onDone();};
+  speechSynthesis.speak(u);
+}
+function stopSpeech(){speechSynthesis.cancel();speaking=false;document.getElementById('speaking-badge').classList.remove('on');}
+
+// ═══ SPEECH RECOGNITION ═══
+let recog=null,listening=false;
+function startListening(onResult){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){addMsg('הדפדפן לא תומך בזיהוי קולי — הקלד ידנית','ai');return;}
+  if(listening){recog?.stop();return;}
+  recog=new SR();
+  recog.lang='en-US';recog.interimResults=false;recog.maxAlternatives=1;
+  recog.onstart=()=>{listening=true;document.getElementById('mic-btn').classList.add('listening');};
+  recog.onresult=e=>{
+    const txt=e.results[0][0].transcript;
+    document.getElementById('chat-input').value=txt;
+    listening=false;document.getElementById('mic-btn').classList.remove('listening');
+    onResult(txt);
+  };
+  recog.onerror=recog.onend=()=>{listening=false;document.getElementById('mic-btn').classList.remove('listening');};
+  recog.start();
+}
+
+// ═══ CHAT ═══
+let chatHistory=[];
+function addMsg(text,role){
+  const el=document.createElement('div');
+  el.className='msg '+role;el.textContent=text;
+  document.getElementById('chat-msgs').appendChild(el);
+  document.getElementById('chat-msgs').scrollTop=99999;
+  return el;
+}
+function addTyping(){
+  const el=document.createElement('div');
+  el.className='msg ai typing';el.textContent='...';el.id='typing-indicator';
+  document.getElementById('chat-msgs').appendChild(el);
+  document.getElementById('chat-msgs').scrollTop=99999;
+}
+function removeTyping(){document.getElementById('typing-indicator')?.remove();}
+
+async function sendToAI(userMsg){
+  addMsg(userMsg,'user');
+  chatHistory.push({role:'user',content:userMsg});
+  addTyping();
+
+  // build system context
+  const today=todayStr();
+  const todayTasks=tasks.filter(t=>t.date===today);
+  const upcoming=tasks.filter(t=>t.date>today).slice(0,10);
+  const systemPrompt=`אתה עוזר אישי קולי ידידותי בעברית. אתה עוזר למשתמש לנהל את המשימות שלו.
+היום: ${fmtDate(today)}
+משימות להיום: ${todayTasks.length?todayTasks.map(t=>(t.done?'✓':'-')+' '+t.text).join(', '):'אין'}
+משימות קרובות: ${upcoming.length?upcoming.map(t=>t.date+': '+t.text).join(', '):'אין'}
+
+כשהמשתמש מבקש להוסיף משימה, החזר JSON בפורמט: {"action":"add","text":"טקסט המשימה","date":"YYYY-MM-DD"}
+כשמבקש למחוק, החזר: {"action":"delete","text":"טקסט לחיפוש"}
+כשמבקש לסמן כהושלם: {"action":"done","text":"טקסט לחיפוש"}
+אחרת החזר תשובה רגילה בעברית. תהיה קצר וידידותי.`;
+
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:400,
+        system:systemPrompt,
+        messages:chatHistory
+      })
+    });
+    const data=await resp.json();
+    removeTyping();
+    const reply=data.content?.[0]?.text||'מצטער, לא הצלחתי להבין';
+
+    // try parse action
+    try{
+      const json=JSON.parse(reply.match(/\{[\s\S]*\}/)?.[0]||'{}');
+      if(json.action==='add'){
+        addTask(json.text,json.date||today);
+        const conf=`הוספתי: "${json.text}" ל${json.date&&json.date!==today?dayLabel(json.date):'היום'}`;
+        addMsg(conf,'ai');chatHistory.push({role:'assistant',content:conf});
+        speak(conf);return;
+      }
+      if(json.action==='done'){
+        const t=tasks.find(t=>t.text.includes(json.text.slice(0,8)));
+        if(t){t.done=true;save('tasks',tasks);renderHome();}
+        const conf=`סימנתי "${json.text}" כהושלם ✓`;
+        addMsg(conf,'ai');chatHistory.push({role:'assistant',content:conf});
+        speak(conf);return;
+      }
+      if(json.action==='delete'){
+        const before=tasks.length;
+        tasks=tasks.filter(t=>!t.text.includes(json.text.slice(0,8)));
+        save('tasks',tasks);renderHome();
+        const conf=tasks.length<before?`הסרתי את המשימה`:`לא מצאתי משימה כזו`;
+        addMsg(conf,'ai');chatHistory.push({role:'assistant',content:conf});
+        speak(conf);return;
+      }
+    }catch(e){}
+
+    // plain reply
+    const clean=reply.replace(/\{[\s\S]*\}/g,'').trim();
+    addMsg(clean,'ai');
+    chatHistory.push({role:'assistant',content:clean});
+    speak(clean);
+  }catch(e){
+    removeTyping();
+    const err='שגיאת חיבור — נסה שוב';
+    addMsg(err,'ai');speak(err);
+  }
+}
+
+function startMorningChat(){
+  document.getElementById('chat-msgs').innerHTML='';
+  chatHistory=[];
+  const today=todayStr();
+  const todayTasks=tasks.filter(t=>t.date===today);
+  const h=new Date().getHours();
+  const greeting=h<12?'בוקר טוב':'שלום';
+  let intro=`${greeting}! `;
+  if(todayTasks.length){
+    const done=todayTasks.filter(t=>t.done).length;
+    intro+=`יש לך ${todayTasks.length} משימות להיום, ${done} הושלמו. מה עשית? יש משהו להוסיף?`;
+  } else {
+    intro+=`אין לך משימות מוגדרות להיום. רוצה להוסיף משהו?`;
+  }
+  addMsg(intro,'ai');
+  chatHistory.push({role:'assistant',content:intro});
+  setTimeout(()=>speak(intro),300);
+}
+
+// input handlers
+document.getElementById('send-btn').onclick=()=>{
+  const txt=document.getElementById('chat-input').value.trim();
+  if(!txt)return;
+  document.getElementById('chat-input').value='';
+  sendToAI(txt);
+};
+document.getElementById('chat-input').addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();document.getElementById('send-btn').click();}
+});
+document.getElementById('mic-btn').onclick=()=>{
+  stopSpeech();
+  startListening(txt=>{if(txt)sendToAI(txt);});
+};
+
+// ═══ NOTIFICATIONS ═══
+let notifEnabled=load('notifEnabled',false);
+let notifTime=load('notifTime','08:00');
+document.getElementById('notif-time').value=notifTime;
+if(notifEnabled)document.getElementById('notif-btn').classList.add('on'),document.getElementById('notif-btn').textContent='✓ תזכורת פעילה';
+
+document.getElementById('notif-btn').onclick=async()=>{
+  if(notifEnabled){
+    notifEnabled=false;save('notifEnabled',false);
+    document.getElementById('notif-btn').classList.remove('on');
+    document.getElementById('notif-btn').textContent='🔔 הפעל תזכורת בוקר';
+    return;
+  }
+  if('Notification' in window){
+    const perm=await Notification.requestPermission();
+    if(perm==='granted'){
+      notifEnabled=true;save('notifEnabled',true);
+      notifTime=document.getElementById('notif-time').value;save('notifTime',notifTime);
+      document.getElementById('notif-btn').classList.add('on');
+      document.getElementById('notif-btn').textContent='✓ תזכורת פעילה';
+      scheduleNotif();
+    }
+  }
+};
+document.getElementById('notif-time').onchange=function(){
+  notifTime=this.value;save('notifTime',notifTime);
+  if(notifEnabled)scheduleNotif();
+};
+
+function scheduleNotif(){
+  // check every minute if it's time
+  clearInterval(window._notifInterval);
+  window._notifInterval=setInterval(()=>{
+    if(!notifEnabled)return;
+    const now=new Date();
+    const [h,m]=notifTime.split(':').map(Number);
+    if(now.getHours()===h&&now.getMinutes()===m){
+      const today=todayStr();
+      const todayTasks=tasks.filter(t=>t.date===today);
+      const body=todayTasks.length?`יש לך ${todayTasks.length} משימות להיום: ${todayTasks.slice(0,2).map(t=>t.text).join(', ')}...`:'אין משימות מוגדרות להיום';
+      new Notification('יומן קולי — בוקר טוב 🌅',{body,icon:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🎙</text></svg>'});
+    }
+  },30000);
+}
+if(notifEnabled)scheduleNotif();
+
+// ═══ INIT ═══
+speechSynthesis.getVoices(); // warm up
+renderHome();
+</script>
+</body>
+</html>
