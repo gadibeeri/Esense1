@@ -409,7 +409,7 @@ function drawSeed(s,t,ctx,W,H){
       const by=H*.4+Math.sin(t*1.2+i)*H*.06;
       const bw=Math.sin(t*4+i)*0.5;
       ctx.save();ctx.translate(bx,by);
-      [[−1,0.3],[1,0.3],[-1,-0.2],[1,-0.2]].forEach(([dx,dy])=>{
+      [[-1,0.3],[1,0.3],[-1,-0.2],[1,-0.2]].forEach(([dx,dy])=>{
         ctx.beginPath();ctx.ellipse(dx*W*.025*Math.abs(bw),dy*H*.02,W*.022*Math.abs(bw),H*.014,0,0,Math.PI*2);
         ctx.fillStyle=`hsla(${30+i*40},85%,65%,${ba*.7})`;ctx.fill();
       });
