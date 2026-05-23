@@ -925,18 +925,18 @@ document.getElementById('start-btn').onclick=()=>{
   }
   initSounds(currentScene);requestWakeLock();
   therapyOn=true;
-  document.getElementById('home').classList.add('out');
+  document.getElementById('home').style.display='none';
   document.getElementById('hud').classList.add('on');
   document.getElementById('rms-badge').style.display='block';
   document.getElementById('timer-badge').style.display='block';
   document.getElementById('back-btn').style.display='flex';
   document.getElementById('hearts-wrap').style.display='flex';
   startSessionTimer();
-  setTimeout(()=>document.getElementById('home').style.visibility='hidden',750);
 };
 document.getElementById('back-btn').onclick=()=>{
   stopSessionTimer();stopSounds();releaseWakeLock();therapyOn=false;
-  document.getElementById('home').style.visibility='';document.getElementById('home').classList.remove('out');
+  document.getElementById('home').style.display='flex';
+  document.getElementById('home').classList.remove('out');
   document.getElementById('hud').classList.remove('on');
   document.getElementById('rms-badge').style.display='none';
   document.getElementById('timer-badge').style.display='none';
@@ -945,7 +945,8 @@ document.getElementById('back-btn').onclick=()=>{
 };
 document.getElementById('rep-close').onclick=()=>{
   document.getElementById('report').classList.remove('on');
-  document.getElementById('home').style.visibility='';document.getElementById('home').classList.remove('out');
+  document.getElementById('home').style.display='flex';
+  document.getElementById('home').classList.remove('out');
   document.getElementById('hearts-wrap').style.display='none';
   season=0;birdY=0;
 };
