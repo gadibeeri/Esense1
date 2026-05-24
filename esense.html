@@ -59,6 +59,7 @@ select option{background:#0d1828}
 #pdot{position:absolute;top:50%;left:0%;transform:translate(-50%,-50%);width:7px;height:7px;border-radius:50%;background:#fff;box-shadow:0 0 9px rgba(255,255,255,.6);transition:left .9s cubic-bezier(.25,.46,.45,.94)}
 
 #timer-badge{position:fixed;top:max(12px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:11;background:rgba(0,0,0,.32);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:5px 14px;font-size:13px;font-family:monospace;color:rgba(255,255,255,.7);display:none}
+#sound-btn{position:fixed;bottom:max(90px,env(safe-area-inset-bottom,90px));left:50%;transform:translateX(-50%);z-index:15;background:rgba(0,0,0,.5);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:9px 22px;font-size:14px;color:#fff;cursor:pointer;display:none}
 #rms-badge{position:fixed;top:max(12px,env(safe-area-inset-top));left:12px;z-index:11;background:rgba(0,0,0,.32);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:5px 9px;font-size:11px;font-family:monospace;color:rgba(255,255,255,.5);display:none}
 #back-btn{position:fixed;top:max(12px,env(safe-area-inset-top));right:12px;z-index:11;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.3);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.14);color:rgba(255,255,255,.8);font-size:13px;cursor:pointer;display:none;align-items:center;justify-content:center}
 #hearts-wrap{position:fixed;top:max(12px,env(safe-area-inset-top));right:50px;z-index:11;display:none;gap:3px;flex-wrap:wrap;max-width:120px;justify-content:flex-end}
@@ -93,6 +94,7 @@ select option{background:#0d1828}
 <div id="timer-badge">05:00</div>
 <div id="rms-badge">RMS: —</div>
 <button id="back-btn">✕</button>
+<button id="sound-btn">🔊 הפעל צליל</button>
 <div id="hearts-wrap"></div>
 
 <!-- HOME -->
@@ -1082,6 +1084,7 @@ document.getElementById('start-btn').onclick=()=>{
   });
   soundReady=true;
   requestWakeLock();
+  document.getElementById('sound-btn').style.display='block';
   therapyOn=true;
   document.getElementById('home').style.display='none';
   document.getElementById('hud').classList.add('on');
@@ -1093,6 +1096,7 @@ document.getElementById('start-btn').onclick=()=>{
 };
 document.getElementById('back-btn').onclick=()=>{
   stopSessionTimer();stopSounds();releaseWakeLock();therapyOn=false;
+  document.getElementById('sound-btn').style.display='none';
   document.getElementById('home').style.display='flex';
   document.getElementById('home').classList.remove('out');
   document.getElementById('hud').classList.remove('on');
@@ -1107,6 +1111,12 @@ document.getElementById('rep-close').onclick=()=>{
   document.getElementById('home').classList.remove('out');
   document.getElementById('hearts-wrap').style.display='none';
   season=0;birdY=0;
+};
+document.getElementById('sound-btn').onclick=function(){
+  [forestAudio,birdsAudio,sunsetAudio,seagullAudio,seedAudio].forEach(a=>{
+    if(a){a.play().catch(()=>{});}
+  });
+  this.style.display='none';
 };
 document.getElementById('conn-btn').onclick=connectSensor;
 </script>
