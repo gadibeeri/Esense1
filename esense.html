@@ -980,21 +980,27 @@ function endSession(){
   document.getElementById('rep-hearts').textContent=heartCount+' ❤️';
   document.getElementById('rep-avg').textContent=avg+'%';
   document.getElementById('rep-peak').textContent=peak+'%';
-  const gc=document.getElementById('graph-canvas');
-  const gw=document.getElementById('graph-wrap').clientWidth-24;
-  gc.width=gw;gc.height=140;
-  const gCtx=gc.getContext('2d');
-  gCtx.clearRect(0,0,gw,140);
-  [25,50,75].forEach(y=>{gCtx.strokeStyle='rgba(255,255,255,.06)';gCtx.lineWidth=1;gCtx.beginPath();gCtx.moveTo(0,140-y*1.4);gCtx.lineTo(gw,140-y*1.4);gCtx.stroke();});
-  if(vals.length>1){
-    const grad=gCtx.createLinearGradient(0,0,0,140);
-    grad.addColorStop(0,'rgba(122,184,232,.5)');grad.addColorStop(1,'rgba(122,184,232,.02)');
-    gCtx.beginPath();vals.forEach((v,i)=>{const x=(i/(vals.length-1))*gw,y=140-v*140;i===0?gCtx.moveTo(x,y):gCtx.lineTo(x,y);});
-    gCtx.lineTo(gw,140);gCtx.lineTo(0,140);gCtx.closePath();gCtx.fillStyle=grad;gCtx.fill();
-    gCtx.beginPath();vals.forEach((v,i)=>{const x=(i/(vals.length-1))*gw,y=140-v*140;i===0?gCtx.moveTo(x,y):gCtx.lineTo(x,y);});
-    gCtx.strokeStyle='rgba(122,184,232,.9)';gCtx.lineWidth=2;gCtx.stroke();
-  }
   document.getElementById('report').classList.add('on');
+  // draw graph AFTER report is visible so clientWidth is correct
+  setTimeout(()=>{
+    const gc=document.getElementById('graph-canvas');
+    const gw=document.getElementById('graph-wrap').clientWidth-24;
+    gc.width=gw;gc.height=140;
+    const gCtx=gc.getContext('2d');
+    gCtx.clearRect(0,0,gw,140);
+    [25,50,75].forEach(y=>{
+      gCtx.strokeStyle='rgba(255,255,255,.06)';gCtx.lineWidth=1;
+      gCtx.beginPath();gCtx.moveTo(0,140-y*1.4);gCtx.lineTo(gw,140-y*1.4);gCtx.stroke();
+    });
+    if(vals.length>1){
+      const grad=gCtx.createLinearGradient(0,0,0,140);
+      grad.addColorStop(0,'rgba(122,184,232,.5)');grad.addColorStop(1,'rgba(122,184,232,.02)');
+      gCtx.beginPath();vals.forEach((v,i)=>{const x=(i/(vals.length-1))*gw,y=140-v*140;i===0?gCtx.moveTo(x,y):gCtx.lineTo(x,y);});
+      gCtx.lineTo(gw,140);gCtx.lineTo(0,140);gCtx.closePath();gCtx.fillStyle=grad;gCtx.fill();
+      gCtx.beginPath();vals.forEach((v,i)=>{const x=(i/(vals.length-1))*gw,y=140-v*140;i===0?gCtx.moveTo(x,y):gCtx.lineTo(x,y);});
+      gCtx.strokeStyle='rgba(122,184,232,.9)';gCtx.lineWidth=2;gCtx.stroke();
+    }
+  },100);
 }
 
 // ═══ WAKE LOCK ═══
