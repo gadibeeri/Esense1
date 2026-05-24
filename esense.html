@@ -1068,7 +1068,17 @@ document.getElementById('start-btn').onclick=()=>{
     document.getElementById('auto-btn').className='btn on';
     (function step(){relaxTarget+=autoDir*.0025;if(relaxTarget>=1){relaxTarget=1;autoDir=-1;}if(relaxTarget<=0){relaxTarget=0;autoDir=1;}autoRaf=requestAnimationFrame(step);})();
   }
-  initSounds(currentScene);requestWakeLock();
+  // init and IMMEDIATELY play sounds inside click handler (bypasses autoplay block)
+  initSounds(currentScene);
+  // force play with volume after tiny delay
+  setTimeout(()=>{
+    if(sunsetAudio){sunsetAudio.volume=0.3;sunsetAudio.play().catch(e=>console.log(e));}
+    if(seagullAudio){seagullAudio.volume=0.3;seagullAudio.play().catch(e=>console.log(e));}
+    if(forestAudio){forestAudio.volume=0.3;forestAudio.play().catch(e=>console.log(e));}
+    if(birdsAudio){birdsAudio.volume=0.1;birdsAudio.play().catch(e=>console.log(e));}
+    if(seedAudio){seedAudio.volume=0.3;seedAudio.play().catch(e=>console.log(e));}
+  },300);
+  requestWakeLock();
   therapyOn=true;
   document.getElementById('home').style.display='none';
   document.getElementById('hud').classList.add('on');
