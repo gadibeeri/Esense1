@@ -825,9 +825,9 @@ function initSounds(scene){
     forestAudio=birdsAudio=sunsetAudio=seagullAudio=seedAudio=null;
     soundReady=false;
     if(scene==='forest'){
-      forestAudio=new Audio('https://cdn.freesound.org/previews/524/524088_5674468-lq.mp3');
+      forestAudio=new Audio('forest.mp3');
       forestAudio.loop=true;forestAudio.volume=0;
-      birdsAudio=new Audio('https://cdn.freesound.org/previews/514/514358_316129-lq.mp3');
+      birdsAudio=new Audio('birds.mp3');
       birdsAudio.loop=true;birdsAudio.volume=0;
     } else if(scene==='sunset'){
       sunsetAudio=new Audio('ocean.mp3');
@@ -835,7 +835,7 @@ function initSounds(scene){
       seagullAudio=new Audio('seagulls.mp3');
       seagullAudio.loop=true;seagullAudio.volume=0;
     } else if(scene==='seed'){
-      seedAudio=new Audio('https://cdn.freesound.org/previews/524/524088_5674468-lq.mp3');
+      seedAudio=new Audio('forest.mp3');
       seedAudio.loop=true;seedAudio.volume=0;
     }
   }catch(e){console.log('initSounds error:',e);}
