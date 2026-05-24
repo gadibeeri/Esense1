@@ -96,10 +96,10 @@ select option{background:#0d1828}
 <!-- VIDEO BACKGROUND -->
 <div id="vid-bg">
   <video id="vid-tree" loop playsinline preload="auto" style="display:none">
-    <source src="Tree_growing_from_seed_fruits_202605241308.mp4" type="video/mp4">
+    <source src="Treegrowingvideo.mp4" type="video/mp4">
   </video>
   <video id="vid-sunset" loop playsinline preload="auto" style="display:none">
-    <source src="Sunset_moves_down_towards_sea_20260524131 6 (1).mp4" type="video/mp4">
+    <source src="Sunsetvideo.mp4" type="video/mp4">
   </video>
 </div>
 <div id="vid-overlay"></div>
@@ -130,7 +130,7 @@ select option{background:#0d1828}
     <div style="font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.25);margin-bottom:10px">בחר סצנה</div>
     <div class="scene-cards">
       <div class="scene-card sel" data-scene="tree" onclick="selectScene('tree')">
-        <video class="scene-thumb" autoplay muted loop playsinline src="Tree_growing_from_seed_fruits_202605241308.mp4"></video>
+        <video class="scene-thumb" autoplay muted loop playsinline src="Treegrowingvideo.mp4"></video>
         <div class="scene-info">
           <div class="scene-name">🌱 עץ גדל מזרע</div>
           <div class="scene-desc">גדל לאט בלחץ, מהר ברגיעה</div>
@@ -138,7 +138,7 @@ select option{background:#0d1828}
         <div class="scene-check">✓</div>
       </div>
       <div class="scene-card" data-scene="sunset" onclick="selectScene('sunset')">
-        <video class="scene-thumb" autoplay muted loop playsinline src="Sunset_moves_down_towards_sea_20260524131 6 (1).mp4"></video>
+        <video class="scene-thumb" autoplay muted loop playsinline src="Sunsetvideo.mp4"></video>
         <div class="scene-info">
           <div class="scene-name">🌅 שקיעה בים</div>
           <div class="scene-desc">השמש שוקעת לאט ברגיעה</div>
@@ -244,7 +244,7 @@ function startVideo(scene){
   [vidTree,vidSunset].forEach(v=>{v.pause();v.style.display='none';});
   currentVideo = scene==='tree' ? vidTree : vidSunset;
   currentVideo.style.display='block';
-  currentVideo.playbackRate=0.3;
+  currentVideo.playbackRate=0.5;
   currentVideo.play().catch(()=>{});
 }
 
@@ -252,7 +252,7 @@ function updateVideoSpeed(s){
   if(!currentVideo)return;
   // s=0 (stressed) → speed 0.2x (very slow)
   // s=1 (relaxed)  → speed 2.0x (fast forward)
-  const speed=lerp(0.2,2.0,s);
+  const speed=lerp(0.5,2.5,s);
   currentVideo.playbackRate=speed;
   // update speed badge
   const badge=document.getElementById('speed-badge');
