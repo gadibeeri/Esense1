@@ -828,29 +828,27 @@ function initSounds(scene){
     soundReady=false;
     if(scene==='forest'){
       forestAudio=new Audio('forest.mp3');
-      forestAudio.loop=true;forestAudio.volume=0.35;
+      forestAudio.loop=true;forestAudio.volume=0.8;
       birdsAudio=new Audio('freesound_community-birds-19624.mp3');
-      birdsAudio.loop=true;birdsAudio.volume=0.2;
+      birdsAudio.loop=true;birdsAudio.volume=0.7;
     } else if(scene==='sunset'){
       sunsetAudio=new Audio('ocean.mp3');
-      sunsetAudio.loop=true;sunsetAudio.volume=0.4;
+      sunsetAudio.loop=true;sunsetAudio.volume=0.8;
       seagullAudio=new Audio('seagulls.mp3');
-      seagullAudio.loop=true;seagullAudio.volume=0.3;
+      seagullAudio.loop=true;seagullAudio.volume=0.7;
     } else if(scene==='seed'){
       seedAudio=new Audio('forest.mp3');
-      seedAudio.loop=true;seedAudio.volume=0.35;
+      seedAudio.loop=true;seedAudio.volume=0.8;
     }
   }catch(e){console.log('initSounds error:',e);}
 }
 function updateSounds(s){
   if(!soundReady)return;
-  if(forestAudio)forestAudio.volume=clamp(s*.55,0,.55);
-  if(birdsAudio)birdsAudio.volume=clamp((s-.2)*.65,0,.55);
-  // ocean always audible (min 0.2), grows with relaxation
-  if(sunsetAudio)sunsetAudio.volume=clamp(.2+s*.42,0,.62);
-  // seagulls louder early, fades at night
-  if(seagullAudio)seagullAudio.volume=clamp(.25+(1-s)*.2,0,.45);
-  if(seedAudio)seedAudio.volume=clamp(s*.5,0,.5);
+  if(forestAudio)forestAudio.volume=clamp(0.5+s*.3,0,0.8);
+  if(birdsAudio)birdsAudio.volume=clamp(0.3+s*.4,0,0.7);
+  if(sunsetAudio)sunsetAudio.volume=clamp(0.5+s*.3,0,0.8);
+  if(seagullAudio)seagullAudio.volume=clamp(0.4+(1-s)*.3,0,0.7);
+  if(seedAudio)seedAudio.volume=clamp(0.5+s*.3,0,0.8);
 }
 function stopSounds(){
   [forestAudio,birdsAudio,sunsetAudio,seagullAudio,seedAudio].forEach(a=>{
