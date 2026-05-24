@@ -826,17 +826,17 @@ function initSounds(scene){
     soundReady=false;
     if(scene==='forest'){
       forestAudio=new Audio('forest.mp3');
-      forestAudio.loop=true;forestAudio.volume=0;
+      forestAudio.loop=true;forestAudio.volume=0.35;
       birdsAudio=new Audio('freesound_community-birds-19624.mp3');
-      birdsAudio.loop=true;birdsAudio.volume=0;
+      birdsAudio.loop=true;birdsAudio.volume=0.2;
     } else if(scene==='sunset'){
       sunsetAudio=new Audio('ocean.mp3');
-      sunsetAudio.loop=true;sunsetAudio.volume=0;
+      sunsetAudio.loop=true;sunsetAudio.volume=0.4;
       seagullAudio=new Audio('seagulls.mp3');
-      seagullAudio.loop=true;seagullAudio.volume=0;
+      seagullAudio.loop=true;seagullAudio.volume=0.3;
     } else if(scene==='seed'){
       seedAudio=new Audio('forest.mp3');
-      seedAudio.loop=true;seedAudio.volume=0;
+      seedAudio.loop=true;seedAudio.volume=0.35;
     }
   }catch(e){console.log('initSounds error:',e);}
 }
@@ -1065,17 +1065,16 @@ document.getElementById('start-btn').onclick=()=>{
     document.getElementById('auto-btn').className='btn on';
     (function step(){relaxTarget+=autoDir*.0025;if(relaxTarget>=1){relaxTarget=1;autoDir=-1;}if(relaxTarget<=0){relaxTarget=0;autoDir=1;}autoRaf=requestAnimationFrame(step);})();
   }
-  // init and IMMEDIATELY play sounds inside click handler (bypasses autoplay block)
+  // init and play sounds - load then play
   initSounds(currentScene);
-  // force play with volume after tiny delay
-  setTimeout(()=>{
-    if(sunsetAudio){sunsetAudio.volume=0.3;sunsetAudio.play().catch(e=>console.log(e));}
-    if(seagullAudio){seagullAudio.volume=0.3;seagullAudio.play().catch(e=>console.log(e));}
-    if(forestAudio){forestAudio.volume=0.3;forestAudio.play().catch(e=>console.log(e));}
-    if(birdsAudio){birdsAudio.volume=0.1;birdsAudio.play().catch(e=>console.log(e));}
-    if(seedAudio){seedAudio.volume=0.3;seedAudio.play().catch(e=>console.log(e));}
-    soundReady=true;
-  },300);
+  [forestAudio,birdsAudio,sunsetAudio,seagullAudio,seedAudio].forEach(a=>{
+    if(!a)return;
+    a.load();
+    const tryPlay=()=>{a.play().catch(()=>{});};
+    a.addEventListener('canplaythrough',tryPlay,{once:true});
+    setTimeout(tryPlay,1000); // fallback
+  });
+  soundReady=true;
   requestWakeLock();
   therapyOn=true;
   document.getElementById('home').style.display='none';
