@@ -402,92 +402,80 @@ function drawSeed(s,t,ctx,W,H){
       ctx.moveTo(cx-bw*.7,by);ctx.quadraticCurveTo(cx,by+H*.008,cx+bw*.7,by);ctx.stroke();
     }
 
-    // SCAFFOLD BRANCHES — main structural branches
+    // SCAFFOLD BRANCHES — drawn FIRST, canopy will cover their base
     const branchDefs=[
-      {h:.38,side: 1,angle:-.42,len:.30,thick:6},
-      {h:.38,side:-1,angle: .42,len:.28,thick:6},
-      {h:.55,side: 1,angle:-.52,len:.24,thick:5},
-      {h:.55,side:-1,angle: .52,len:.22,thick:5},
-      {h:.72,side: 1,angle:-.62,len:.18,thick:3.5},
-      {h:.72,side:-1,angle: .62,len:.16,thick:3.5},
-      {h:.84,side: 1,angle:-.38,len:.14,thick:2.5},
-      {h:.84,side:-1,angle: .38,len:.12,thick:2.5},
+      {h:.38,side: 1,len:.30,thick:6},
+      {h:.38,side:-1,len:.28,thick:6},
+      {h:.52,side: 1,len:.24,thick:4.5},
+      {h:.52,side:-1,len:.22,thick:4.5},
+      {h:.66,side: 1,len:.18,thick:3},
+      {h:.66,side:-1,len:.16,thick:3},
+      {h:.78,side: 1,len:.13,thick:2},
+      {h:.78,side:-1,len:.11,thick:2},
     ];
 
     const bA=sp;
     branchDefs.forEach((b,i)=>{
-      const bProgress=clamp((bA-(i*.08))/.6,0,1);if(bProgress<=0)return;
+      const bProgress=clamp((bA-(i*.07))/.65,0,1);if(bProgress<=0)return;
+      // branch starts FROM THE TRUNK SIDE, not from center
+      const startX=cx+b.side*trunkW*.45;
       const bY=cy-treeH*b.h;
       const bLen=W*b.len*bProgress;
-      const endX=cx+b.side*bLen*Math.cos(Math.abs(b.angle)*.5);
-      const endY=bY-bLen*Math.sin(Math.abs(b.angle));
-      const midX=cx+b.side*bLen*.45;
-      const midY=bY-bLen*.3;
-
-      const bg=ctx.createLinearGradient(cx,bY,endX,endY);
-      bg.addColorStop(0,lerpC('#4a2808','#5c3510',sp));
-      bg.addColorStop(1,lerpC('#5c3510','#6a4218',sp));
-      ctx.strokeStyle=bg;
-      ctx.lineWidth=b.thick*bProgress*(1-i*.04);ctx.lineCap='round';
-      ctx.beginPath();ctx.moveTo(cx,bY);
-      ctx.quadraticCurveTo(midX,midY,endX,endY);ctx.stroke();
-
-      // secondary branches at tips
-      if(bProgress>.55&&i<6){
-        const sub=clamp((bProgress-.55)/.45,0,1);
-        const subLen=W*.08*sub;
+      const endX=cx+b.side*(bLen+trunkW*.5);
+      const endY=bY-bLen*.45;
+      ctx.strokeStyle=lerpC('#4a2808','#6a4218',sp);
+      ctx.lineWidth=b.thick*bProgress*(1-i*.03);ctx.lineCap='round';
+      ctx.beginPath();ctx.moveTo(startX,bY);
+      ctx.quadraticCurveTo(cx+b.side*(bLen*.4+trunkW*.3),bY-bLen*.2,endX,endY);
+      ctx.stroke();
+      // secondary branches
+      if(bProgress>.5&&i<6){
+        const sub=clamp((bProgress-.5)/.5,0,1);
+        const subLen=W*.07*sub;
         [-1,1].forEach(sd=>{
-          const sx=endX+sd*subLen*.7;
-          const sy=endY-subLen*.5;
-          ctx.lineWidth=(b.thick*.4)*sub;
+          ctx.lineWidth=b.thick*.38*sub;
           ctx.beginPath();ctx.moveTo(endX,endY);
-          ctx.quadraticCurveTo((endX+sx)/2,endY-subLen*.3,sx,sy);ctx.stroke();
+          ctx.quadraticCurveTo(endX+sd*subLen*.5,endY-subLen*.3,
+            endX+sd*subLen*.8,endY-subLen*.55);ctx.stroke();
         });
       }
     });
 
-    // CANOPY — many overlapping blobs for leaf mass
-    if(sp>.3){
-      const ca=clamp((sp-.3)/.7,0,1);
-      const baseR=W*(0.055+ca*.16);
-
-      // draw darker underlayer first
+    // CANOPY — drawn AFTER branches so it covers their base naturally
+    if(sp>.25){
+      const ca=clamp((sp-.25)/.75,0,1);
+      const baseR=W*(0.055+ca*.17);
       const blobPos=[
-        [0,0,1],[-.14,.07,.82],[.16,.06,.78],
-        [.08,-.15,.72],[-.10,-.12,.68],[.22,.14,.62],
-        [-.20,.12,.60],[.04,.20,.56],[-.06,-.22,.54],
-        [.26,-.08,.50],[-.24,-.06,.48],[.12,.26,.44],
+        [0,0,1],[-.13,.06,.82],[.15,.05,.78],
+        [.07,-.14,.72],[-.09,-.11,.68],[.21,.13,.62],
+        [-.19,.11,.60],[.03,.19,.56],[-.05,-.20,.54],
+        [.25,-.07,.50],[-.22,-.05,.48],[.11,.25,.44],
       ];
-      // shadow pass
+      // dark shadow pass
       blobPos.slice(0,Math.ceil(blobPos.length*ca)).forEach(([dx,dy,sc])=>{
-        const hue=lerp(85,115,ca);
         ctx.beginPath();
         ctx.arc(cx+dx*W*ca,tTop+dy*H*ca,baseR*sc*ca,0,Math.PI*2);
-        ctx.fillStyle='hsla('+hue+',70%,'+lerp(18,28,ca)+'%,'+(ca*.75)+')';ctx.fill();
+        ctx.fillStyle='hsla('+lerp(85,112,ca)+',72%,'+lerp(16,26,ca)+'%,'+(ca*.82)+')';ctx.fill();
       });
-      // light pass
+      // mid green pass
       blobPos.slice(0,Math.ceil(blobPos.length*ca)).forEach(([dx,dy,sc])=>{
-        const hue=lerp(90,120,ca);
-        const ox=dx*W*ca*0.85,oy=dy*H*ca*0.85;
         ctx.beginPath();
-        ctx.arc(cx+ox,tTop+oy,baseR*sc*ca*.72,0,Math.PI*2);
-        ctx.fillStyle='hsla('+hue+',68%,'+lerp(26,40,ca)+'%,'+(ca*.65)+')';ctx.fill();
+        ctx.arc(cx+dx*W*ca*.88,tTop+dy*H*ca*.88,baseR*sc*ca*.75,0,Math.PI*2);
+        ctx.fillStyle='hsla('+lerp(88,118,ca)+',68%,'+lerp(24,38,ca)+'%,'+(ca*.7)+')';ctx.fill();
       });
-      // highlight top
-      ctx.beginPath();ctx.arc(cx+W*.04*ca,tTop-H*.03*ca,baseR*.42*ca,0,Math.PI*2);
-      ctx.fillStyle='hsla('+lerp(92,128,ca)+',62%,'+lerp(38,52,ca)+'%,'+(ca*.5)+')';ctx.fill();
-
-      // SMALL LEAF DETAILS scattered on outer canopy edge
-      if(ca>.5){
-        const la=clamp((ca-.5)/.5,0,1);
-        for(let i=0;i<20;i++){
-          const ang=(i/20)*Math.PI*2+t*.04;
-          const r=baseR*(0.75+Math.sin(i*2.3)*.25);
+      // highlight top-right
+      ctx.beginPath();ctx.arc(cx+W*.05*ca,tTop-H*.04*ca,baseR*.4*ca,0,Math.PI*2);
+      ctx.fillStyle='hsla('+lerp(92,130,ca)+',62%,'+lerp(36,52,ca)+'%,'+(ca*.52)+')';ctx.fill();
+      // small leaves on edge
+      if(ca>.45){
+        const la=clamp((ca-.45)/.55,0,1);
+        for(let i=0;i<24;i++){
+          const ang=(i/24)*Math.PI*2+t*.035;
+          const r=baseR*(0.78+Math.sin(i*2.1)*.22);
           const lx=cx+Math.cos(ang)*r;
-          const ly=tTop+Math.sin(ang)*r*.65;
-          const lsz=W*.012+Math.sin(i*3.1)*.006*W;
-          ctx.beginPath();ctx.ellipse(lx,ly,lsz,lsz*.55,ang+.5,0,Math.PI*2);
-          ctx.fillStyle='hsla('+lerp(90,125,ca)+',70%,'+lerp(28,42,ca)+'%,'+(la*.8)+')';ctx.fill();
+          const ly=tTop+Math.sin(ang)*r*.62;
+          ctx.beginPath();ctx.ellipse(lx,ly,W*.011+Math.sin(i*3.3)*.005*W,W*.006,ang+.4,0,Math.PI*2);
+          ctx.fillStyle='hsla('+lerp(88,122,ca)+',72%,'+lerp(26,40,ca)+'%,'+(la*.82)+')';ctx.fill();
         }
       }
     }
@@ -831,32 +819,38 @@ setTimeout(drawThumbs,100);
 let soundReady=false,forestAudio=null,birdsAudio=null,sunsetAudio=null,seagullAudio=null,seedAudio=null;
 function initSounds(scene){
   try{
-    [forestAudio,birdsAudio,sunsetAudio,seagullAudio,seedAudio].forEach(a=>{if(a){a.pause();a.currentTime=0;}});
+    // stop and null all existing audio first
+    [forestAudio,birdsAudio,sunsetAudio,seagullAudio,seedAudio].forEach(a=>{
+      if(a){a.pause();a.src='';}
+    });
+    forestAudio=birdsAudio=sunsetAudio=seagullAudio=seedAudio=null;
+    soundReady=false;
+
     if(scene==='forest'){
       forestAudio=new Audio('https://cdn.freesound.org/previews/524/524088_5674468-lq.mp3');
       forestAudio.loop=true;forestAudio.volume=0;forestAudio.play().catch(()=>{});
       birdsAudio=new Audio('https://cdn.freesound.org/previews/514/514358_316129-lq.mp3');
       birdsAudio.loop=true;birdsAudio.volume=0;birdsAudio.play().catch(()=>{});
-      soundReady=true;
     } else if(scene==='sunset'){
-      sunsetAudio=new Audio('https://cdn.freesound.org/previews/361/361635_6543855-lq.mp3');
-      sunsetAudio.loop=true;sunsetAudio.volume=0;sunsetAudio.play().catch(()=>{});
-      seagullAudio=new Audio('https://cdn.freesound.org/previews/131/131723_2398403-lq.mp3');
-      seagullAudio.loop=true;seagullAudio.volume=0;seagullAudio.play().catch(()=>{});
-      soundReady=true;
+      sunsetAudio=new Audio('ocean.mp3');
+      sunsetAudio.loop=true;sunsetAudio.volume=0;sunsetAudio.play().catch(e=>console.log('ocean:',e));
+      seagullAudio=new Audio('seagulls.mp3');
+      seagullAudio.loop=true;seagullAudio.volume=0;seagullAudio.play().catch(e=>console.log('seagulls:',e));
     } else if(scene==='seed'){
       seedAudio=new Audio('https://cdn.freesound.org/previews/524/524088_5674468-lq.mp3');
       seedAudio.loop=true;seedAudio.volume=0;seedAudio.play().catch(()=>{});
-      soundReady=true;
     }
-  }catch(e){}
+    soundReady=true;
+  }catch(e){console.log('initSounds error:',e);}
 }
 function updateSounds(s){
   if(!soundReady)return;
   if(forestAudio)forestAudio.volume=clamp(s*.55,0,.55);
   if(birdsAudio)birdsAudio.volume=clamp((s-.2)*.65,0,.55);
-  if(sunsetAudio)sunsetAudio.volume=clamp(s*.62,0,.62);
-  if(seagullAudio)seagullAudio.volume=clamp((1-s)*.4,0,.4);
+  // ocean always audible (min 0.2), grows with relaxation
+  if(sunsetAudio)sunsetAudio.volume=clamp(.2+s*.42,0,.62);
+  // seagulls louder early, fades at night
+  if(seagullAudio)seagullAudio.volume=clamp(.25+(1-s)*.2,0,.45);
   if(seedAudio)seedAudio.volume=clamp(s*.5,0,.5);
 }
 function stopSounds(){
