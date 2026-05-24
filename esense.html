@@ -819,28 +819,25 @@ setTimeout(drawThumbs,100);
 let soundReady=false,forestAudio=null,birdsAudio=null,sunsetAudio=null,seagullAudio=null,seedAudio=null;
 function initSounds(scene){
   try{
-    // stop and null all existing audio first
     [forestAudio,birdsAudio,sunsetAudio,seagullAudio,seedAudio].forEach(a=>{
       if(a){a.pause();a.src='';}
     });
     forestAudio=birdsAudio=sunsetAudio=seagullAudio=seedAudio=null;
     soundReady=false;
-
     if(scene==='forest'){
       forestAudio=new Audio('https://cdn.freesound.org/previews/524/524088_5674468-lq.mp3');
-      forestAudio.loop=true;forestAudio.volume=0;forestAudio.play().catch(()=>{});
+      forestAudio.loop=true;forestAudio.volume=0;
       birdsAudio=new Audio('https://cdn.freesound.org/previews/514/514358_316129-lq.mp3');
-      birdsAudio.loop=true;birdsAudio.volume=0;birdsAudio.play().catch(()=>{});
+      birdsAudio.loop=true;birdsAudio.volume=0;
     } else if(scene==='sunset'){
       sunsetAudio=new Audio('ocean.mp3');
-      sunsetAudio.loop=true;sunsetAudio.volume=0;sunsetAudio.play().catch(e=>console.log('ocean:',e));
+      sunsetAudio.loop=true;sunsetAudio.volume=0;
       seagullAudio=new Audio('seagulls.mp3');
-      seagullAudio.loop=true;seagullAudio.volume=0;seagullAudio.play().catch(e=>console.log('seagulls:',e));
+      seagullAudio.loop=true;seagullAudio.volume=0;
     } else if(scene==='seed'){
       seedAudio=new Audio('https://cdn.freesound.org/previews/524/524088_5674468-lq.mp3');
-      seedAudio.loop=true;seedAudio.volume=0;seedAudio.play().catch(()=>{});
+      seedAudio.loop=true;seedAudio.volume=0;
     }
-    soundReady=true;
   }catch(e){console.log('initSounds error:',e);}
 }
 function updateSounds(s){
@@ -1077,6 +1074,7 @@ document.getElementById('start-btn').onclick=()=>{
     if(forestAudio){forestAudio.volume=0.3;forestAudio.play().catch(e=>console.log(e));}
     if(birdsAudio){birdsAudio.volume=0.1;birdsAudio.play().catch(e=>console.log(e));}
     if(seedAudio){seedAudio.volume=0.3;seedAudio.play().catch(e=>console.log(e));}
+    soundReady=true;
   },300);
   requestWakeLock();
   therapyOn=true;
