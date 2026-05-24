@@ -244,17 +244,25 @@ function startVideo(scene){
   [vidTree,vidSunset].forEach(v=>{v.pause();v.style.display='none';});
   currentVideo = scene==='tree' ? vidTree : vidSunset;
   currentVideo.style.display='block';
-  currentVideo.playbackRate=0.5;
+  currentVideo.currentTime=0;
+  currentVideo.playbackRate=1.0;
+  currentVideo.load();
   currentVideo.play().catch(()=>{});
+  // watchdog: check every 2s that video is playing
+  if(window._vidWatchdog) clearInterval(window._vidWatchdog);
+  window._vidWatchdog=setInterval(()=>{
+    if(!currentVideo||!therapyOn){clearInterval(window._vidWatchdog);return;}
+    if(currentVideo.paused||currentVideo.readyState<2){
+      currentVideo.play().catch(()=>{});
+    }
+  },2000);
 }
 
 function updateVideoSpeed(s){
   if(!currentVideo)return;
-  // s=0 (stressed) → speed 0.2x (very slow)
-  // s=1 (relaxed)  → speed 2.0x (fast forward)
-  const speed=lerp(0.5,2.5,s);
-  currentVideo.playbackRate=speed;
-  // update speed badge
+  const speed=lerp(0.8,3.0,s);
+  try{currentVideo.playbackRate=speed;}catch(e){}
+  if(currentVideo.paused&&therapyOn) currentVideo.play().catch(()=>{});
   const badge=document.getElementById('speed-badge');
   if(s<0.25) badge.textContent='🐢 מואט מאוד';
   else if(s<0.5) badge.textContent='🐌 מואט';
@@ -509,7 +517,10 @@ document.getElementById('start-btn').onclick=()=>{
   startSessionTimer();
 };
 document.getElementById('sound-btn').onclick=function(){
-  playSounds();this.style.display='none';
+  playSounds();
+  // also ensure video plays
+  if(currentVideo) currentVideo.play().catch(()=>{});
+  this.style.display='none';
 };
 document.getElementById('back-btn').onclick=()=>{
   stopSessionTimer();stopSounds();releaseWakeLock();therapyOn=false;
