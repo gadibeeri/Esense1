@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>נשימה וטבע · eSense</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;font-family:system-ui,sans-serif;direction:rtl;background:#06080f;color:#fff}
+
+/* VIDEO BACKGROUND */
+#vid-bg{position:fixed;inset:0;z-index:1;background:#000}
+#vid-bg video{width:100%;height:100%;object-fit:cover;display:block}
+#vid-overlay{position:fixed;inset:0;z-index:2;background:rgba(0,0,0,.18);pointer-events:none}
+
+/* HOME */
+#home{position:fixed;inset:0;z-index:50;overflow-y:auto;background:linear-gradient(160deg,#06090f,#0c1828);padding:44px 0 28px;transition:opacity .7s,transform .7s}
+#home.out{opacity:0;transform:scale(1.04);pointer-events:none}
+.hi{padding:0 20px;display:flex;flex-direction:column;gap:16px}
+.logo{font-size:clamp(1.9rem,8vw,2.6rem);font-weight:300;line-height:1.1;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,.07)}
+.logo em{font-style:italic;color:rgba(150,205,255,.7)}
+.card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:16px;overflow:hidden}
+.crow{padding:13px 16px;border-bottom:1px solid rgba(255,255,255,.06)}
+.crow:last-child{border-bottom:none}
+.lbl{font-size:11px;color:rgba(255,255,255,.32);letter-spacing:.08em;margin-bottom:4px}
+.val{font-size:14px;color:rgba(255,255,255,.8)}
+.rmsnum{font-size:26px;font-family:monospace;color:#fff;margin-bottom:8px}
+.rbar{height:5px;background:rgba(255,255,255,.1);border-radius:99px;overflow:hidden}
+.rfill{height:100%;background:linear-gradient(90deg,#4ecb71,#a8e090);border-radius:99px;width:0%;transition:width .1s}
+.dot{width:10px;height:10px;border-radius:50%;background:#252525;transition:all .3s}
+.dot.on{background:#4ecb71;box-shadow:0 0 8px #4ecb71;animation:dp 1.8s infinite}
+@keyframes dp{0%,100%{opacity:1}50%{opacity:.3}}
+select{width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#fff;padding:9px 11px;font-size:13px;outline:none;appearance:none}
+select option{background:#0d1828}
+.btn{width:100%;padding:11px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:rgba(255,255,255,.72);font-size:13px;cursor:pointer}
+.btn.on{background:rgba(122,184,232,.12);border-color:rgba(122,184,232,.35);color:#7ab8e8}
+.btn.danger{background:rgba(220,80,80,.1);border-color:rgba(220,80,80,.3);color:#e08080}
+.status-row{display:flex;align-items:center;justify-content:space-between}
+.instr{background:rgba(255,200,75,.06);border:1px solid rgba(255,200,75,.16);border-radius:12px;padding:12px 14px;font-size:12px;color:rgba(255,218,125,.82);line-height:1.75}
+.dur-tabs{display:flex;gap:8px}
+.dur-tab{flex:1;padding:11px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:rgba(255,255,255,.5);font-size:14px;cursor:pointer;text-align:center;transition:all .2s}
+.dur-tab.sel{background:rgba(90,170,255,.18);border-color:rgba(90,170,255,.35);color:#fff}
+
+/* SCENE CARDS */
+.scene-cards{display:flex;flex-direction:column;gap:10px}
+.scene-card{border-radius:14px;overflow:hidden;cursor:pointer;border:2px solid transparent;transition:all .25s;position:relative;background:#111;user-select:none;-webkit-user-select:none}
+.scene-card *{pointer-events:none}
+.scene-card.sel{border-color:rgba(90,170,255,.6);box-shadow:0 0 20px rgba(90,170,255,.15)}
+.scene-thumb{width:100%;height:90px;object-fit:cover;display:block}
+.scene-info{padding:11px 14px;background:rgba(0,0,0,.6);backdrop-filter:blur(6px)}
+.scene-name{font-size:15px;color:#fff;margin-bottom:2px}
+.scene-desc{font-size:12px;color:rgba(255,255,255,.45)}
+.scene-check{position:absolute;top:10px;left:10px;width:22px;height:22px;border-radius:50%;background:rgba(90,170,255,.9);display:none;align-items:center;justify-content:center;font-size:13px}
+.scene-card.sel .scene-check{display:flex}
+
+/* HUD */
+#hud{position:fixed;bottom:0;left:0;right:0;z-index:10;padding:50px 28px max(18px,env(safe-area-inset-bottom));background:linear-gradient(to top,rgba(0,0,0,.65),transparent);display:flex;flex-direction:column;align-items:center;gap:9px;pointer-events:none;opacity:0;transition:opacity .8s}
+#hud.on{opacity:1}
+#scene-lbl{font-size:15px;font-style:italic;color:rgba(255,255,255,.85);letter-spacing:.12em;text-shadow:0 2px 14px rgba(0,0,0,.9)}
+#pbar{width:min(210px,52vw);height:2px;background:rgba(255,255,255,.2);border-radius:99px;position:relative}
+#pfill{height:100%;border-radius:99px;background:linear-gradient(90deg,#7ab8e8,#98e880);width:0%;transition:width .9s cubic-bezier(.25,.46,.45,.94)}
+#pdot{position:absolute;top:50%;left:0%;transform:translate(-50%,-50%);width:7px;height:7px;border-radius:50%;background:#fff;box-shadow:0 0 9px rgba(255,255,255,.6);transition:left .9s cubic-bezier(.25,.46,.45,.94)}
+
+/* SPEED indicator */
+#speed-badge{position:fixed;bottom:max(130px,env(safe-area-inset-bottom,130px));left:50%;transform:translateX(-50%);z-index:11;background:rgba(0,0,0,.4);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:5px 14px;font-size:12px;color:rgba(255,255,255,.65);display:none;pointer-events:none}
+
+#timer-badge{position:fixed;top:max(12px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:11;background:rgba(0,0,0,.32);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:5px 14px;font-size:13px;font-family:monospace;color:rgba(255,255,255,.7);display:none}
+#rms-badge{position:fixed;top:max(12px,env(safe-area-inset-top));left:12px;z-index:11;background:rgba(0,0,0,.32);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:5px 9px;font-size:11px;font-family:monospace;color:rgba(255,255,255,.5);display:none}
+#back-btn{position:fixed;top:max(12px,env(safe-area-inset-top));right:12px;z-index:11;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.3);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.14);color:rgba(255,255,255,.8);font-size:13px;cursor:pointer;display:none;align-items:center;justify-content:center}
+#sound-btn{position:fixed;bottom:max(90px,env(safe-area-inset-bottom,90px));left:50%;transform:translateX(-50%);z-index:15;background:rgba(0,0,0,.5);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:9px 22px;font-size:14px;color:#fff;cursor:pointer;display:none}
+
+/* HEARTS */
+#hearts-wrap{position:fixed;top:max(12px,env(safe-area-inset-top));right:50px;z-index:11;display:none;gap:3px;flex-wrap:wrap;max-width:120px;justify-content:flex-end}
+.heart-icon{font-size:16px;animation:heartPop .4s ease}
+@keyframes heartPop{0%{transform:scale(0)}60%{transform:scale(1.3)}100%{transform:scale(1)}}
+.float-heart{position:fixed;font-size:22px;pointer-events:none;z-index:12;animation:floatUp 1.2s ease forwards}
+@keyframes floatUp{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-80px) scale(1.4)}}
+
+/* REPORT */
+#report{position:fixed;inset:0;z-index:200;background:linear-gradient(160deg,#06090f,#0c1828);display:none;flex-direction:column;overflow-y:auto;padding:44px 0 28px}
+#report.on{display:flex}
+.rep-inner{padding:0 20px;display:flex;flex-direction:column;gap:18px}
+.rep-title{font-size:22px;font-weight:300;border-bottom:1px solid rgba(255,255,255,.07);padding-bottom:14px}
+.rep-title em{font-style:italic;color:rgba(150,205,255,.7)}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat-box{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px}
+.stat-box .n{font-size:26px;font-weight:300;color:#fff;margin-bottom:3px}
+.stat-box .l{font-size:11px;color:rgba(255,255,255,.35);letter-spacing:.08em}
+#graph-wrap{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px}
+#graph-canvas{display:block;width:100%;border-radius:6px}
+.rep-btn{width:100%;padding:15px;border-radius:12px;background:linear-gradient(135deg,rgba(65,145,215,.24),rgba(30,105,170,.16));border:1px solid rgba(90,170,255,.25);color:#fff;font-size:16px;cursor:pointer}
+</style>
+</head>
+<body>
+
+<!-- VIDEO BACKGROUND -->
+<div id="vid-bg">
+  <video id="vid-tree" loop playsinline preload="auto" style="display:none">
+    <source src="Tree_growing_from_seed_fruits_202605241308.mp4" type="video/mp4">
+  </video>
+  <video id="vid-sunset" loop playsinline preload="auto" style="display:none">
+    <source src="Sunset_moves_down_towards_sea_20260524131 6 (1).mp4" type="video/mp4">
+  </video>
+</div>
+<div id="vid-overlay"></div>
+
+<!-- HUD -->
+<div id="hud">
+  <div id="scene-lbl">🌱 גדל לאט</div>
+  <div id="pbar"><div id="pfill"></div><div id="pdot"></div></div>
+</div>
+<div id="speed-badge">🐢 מואט</div>
+<div id="timer-badge">05:00</div>
+<div id="rms-badge">RMS: —</div>
+<button id="back-btn">✕</button>
+<button id="sound-btn">🔊 הפעל צליל</button>
+<div id="hearts-wrap"></div>
+
+<!-- HOME -->
+<div id="home">
+<div class="hi">
+  <div>
+    <div style="font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.28);margin-bottom:8px">Mindfield eSense · Biofeedback</div>
+    <div class="logo">נשימה <em>וטבע</em></div>
+    <div style="font-size:13px;color:rgba(255,255,255,.36);margin-top:8px;line-height:1.6">הוידאו מואץ ככל שאתה רגוע יותר</div>
+  </div>
+
+  <!-- scene picker -->
+  <div>
+    <div style="font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.25);margin-bottom:10px">בחר סצנה</div>
+    <div class="scene-cards">
+      <div class="scene-card sel" data-scene="tree" onclick="selectScene('tree')">
+        <video class="scene-thumb" autoplay muted loop playsinline src="Tree_growing_from_seed_fruits_202605241308.mp4"></video>
+        <div class="scene-info">
+          <div class="scene-name">🌱 עץ גדל מזרע</div>
+          <div class="scene-desc">גדל לאט בלחץ, מהר ברגיעה</div>
+        </div>
+        <div class="scene-check">✓</div>
+      </div>
+      <div class="scene-card" data-scene="sunset" onclick="selectScene('sunset')">
+        <video class="scene-thumb" autoplay muted loop playsinline src="Sunset_moves_down_towards_sea_20260524131 6 (1).mp4"></video>
+        <div class="scene-info">
+          <div class="scene-name">🌅 שקיעה בים</div>
+          <div class="scene-desc">השמש שוקעת לאט ברגיעה</div>
+        </div>
+        <div class="scene-check">✓</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- duration -->
+  <div class="card">
+    <div class="crow">
+      <div class="lbl" style="margin-bottom:10px">משך הסשן</div>
+      <div class="dur-tabs">
+        <button class="dur-tab sel" data-min="5">5 דקות</button>
+        <button class="dur-tab" data-min="10">10 דקות</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- sensor -->
+  <div class="card">
+    <div class="crow">
+      <div class="status-row">
+        <div><div class="lbl">חיישן eSense</div><div class="val" id="sens-lbl">לא מחובר</div></div>
+        <div class="dot" id="sdot"></div>
+      </div>
+    </div>
+    <div class="crow" id="rms-crow" style="display:none">
+      <div class="lbl">RMS — אות גולמי</div>
+      <div class="rmsnum" id="rms-num">0.0000</div>
+      <div class="rbar"><div class="rfill" id="rfill"></div></div>
+    </div>
+    <div class="crow" id="dev-crow" style="display:none">
+      <div class="lbl" style="margin-bottom:6px">כניסת אודיו</div>
+      <select id="devsel"></select>
+    </div>
+    <div class="crow"><button class="btn" id="reset-cal-btn" style="background:rgba(255,200,75,.07);border-color:rgba(255,200,75,.2);color:rgba(255,218,125,.8)">↺ אפס כיול אוטומטי</button></div>
+    <div class="crow"><button class="btn" id="conn-btn">🔌 חבר חיישן eSense</button></div>
+  </div>
+
+  <div class="instr">
+    <strong>הנחיות:</strong> חבר eSense ← לחץ "חבר" ← בחר סצנה ← התחל<br>
+    הוידאו מואץ ככל שאתה רגוע יותר
+  </div>
+
+  <div class="card">
+    <div class="crow">
+      <div class="lbl" style="margin-bottom:8px">הדגמה ידנית (ללא חיישן)</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <span style="font-size:12px;color:rgba(255,255,255,.35)">לחץ</span>
+        <input type="range" id="demo-sl" min="0" max="100" value="5" style="flex:1;accent-color:#7ab8e8">
+        <span style="font-size:12px;color:rgba(255,255,255,.35)">רגוע</span>
+      </div>
+      <button class="btn" id="auto-btn">▶ הדגמה אוטומטית</button>
+    </div>
+  </div>
+
+  <button style="width:100%;padding:17px;border-radius:14px;background:linear-gradient(135deg,rgba(65,145,215,.24),rgba(30,105,170,.16));border:1px solid rgba(90,170,255,.25);color:#fff;font-size:17px;font-style:italic;letter-spacing:.05em;cursor:pointer" id="start-btn">התחל טיפול →</button>
+  <div style="height:4px"></div>
+</div>
+</div>
+
+<!-- REPORT -->
+<div id="report">
+<div class="rep-inner">
+  <div class="rep-title">דוח סשן <em>נשימה וטבע</em></div>
+  <div class="stat-grid">
+    <div class="stat-box"><div class="n" id="rep-dur">—</div><div class="l">משך הסשן</div></div>
+    <div class="stat-box"><div class="n" id="rep-hearts">—</div><div class="l">לבבות שנצברו ❤️</div></div>
+    <div class="stat-box"><div class="n" id="rep-avg">—</div><div class="l">הרפיה ממוצעת</div></div>
+    <div class="stat-box"><div class="n" id="rep-peak">—</div><div class="l">שיא הרפיה</div></div>
+  </div>
+  <div id="graph-wrap">
+    <div style="font-size:11px;color:rgba(255,255,255,.35);letter-spacing:.08em;margin-bottom:8px">רמת הרפיה לאורך הסשן</div>
+    <canvas id="graph-canvas" height="140"></canvas>
+  </div>
+  <button class="rep-btn" id="rep-close">סגור וחזור לתפריט</button>
+  <div style="height:4px"></div>
+</div>
+</div>
+
+<script>
+// ═══ STATE ═══
+let relaxTarget=0.05, season=0;
+let rmsMin=999, rmsMax=0, rmsSmooth=0;
+let micStream=null, audioCtx=null, analyser=null, connected=false;
+let autoRaf=null, autoDir=1, therapyOn=false;
+let sessionDurMin=5, sessionStart=null, sessionTimer=null;
+let sessionHistory=[], heartCount=0, lastHeartSeason=0, prevSeason=0;
+let currentScene='tree';
+let wakeLock=null;
+let currentVideo=null;
+
+const lerp=(a,b,t)=>a+(b-a)*t;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+// ═══ VIDEO CONTROL ═══
+const vidTree   = document.getElementById('vid-tree');
+const vidSunset = document.getElementById('vid-sunset');
+
+function startVideo(scene){
+  [vidTree,vidSunset].forEach(v=>{v.pause();v.style.display='none';});
+  currentVideo = scene==='tree' ? vidTree : vidSunset;
+  currentVideo.style.display='block';
+  currentVideo.playbackRate=0.3;
+  currentVideo.play().catch(()=>{});
+}
+
+function updateVideoSpeed(s){
+  if(!currentVideo)return;
+  // s=0 (stressed) → speed 0.2x (very slow)
+  // s=1 (relaxed)  → speed 2.0x (fast forward)
+  const speed=lerp(0.2,2.0,s);
+  currentVideo.playbackRate=speed;
+  // update speed badge
+  const badge=document.getElementById('speed-badge');
+  if(s<0.25) badge.textContent='🐢 מואט מאוד';
+  else if(s<0.5) badge.textContent='🐌 מואט';
+  else if(s<0.75) badge.textContent='▶ רגיל';
+  else badge.textContent='⚡ מהיר';
+}
+
+function sceneLabel(scene,s){
+  if(scene==='tree') return s<.15?'🌱 זרע קטן':s<.4?'🌿 נובט':s<.7?'🌳 גדל':' 🍎 עץ פורח';
+  return s<.15?'🌅 שקיעה מתחילה':s<.45?'🌇 שמש שוקעת':s<.75?'🌆 דמדומים':'🌙 לילה שלו';
+}
+
+// ═══ SOUNDS ═══
+let soundReady=false, forestAudio=null, birdsAudio=null, sunsetAudio=null, seagullAudio=null;
+
+function initSounds(scene){
+  [forestAudio,birdsAudio,sunsetAudio,seagullAudio].forEach(a=>{if(a){a.pause();a.src='';}});
+  forestAudio=birdsAudio=sunsetAudio=seagullAudio=null;
+  soundReady=false;
+  if(scene==='tree'){
+    forestAudio=new Audio('forest.mp3');forestAudio.loop=true;forestAudio.volume=0.7;
+    birdsAudio=new Audio('freesound_community-birds-19624.mp3');birdsAudio.loop=true;birdsAudio.volume=0.5;
+  } else {
+    sunsetAudio=new Audio('ocean.mp3');sunsetAudio.loop=true;sunsetAudio.volume=0.7;
+    seagullAudio=new Audio('seagulls.mp3');seagullAudio.loop=true;seagullAudio.volume=0.5;
+  }
+  soundReady=true;
+}
+
+function playSounds(){
+  [forestAudio,birdsAudio,sunsetAudio,seagullAudio].forEach(a=>{
+    if(a){a.load();a.play().catch(()=>{});}
+  });
+}
+
+function updateSounds(s){
+  if(!soundReady)return;
+  if(forestAudio)forestAudio.volume=clamp(0.4+s*.4,0,0.8);
+  if(birdsAudio)birdsAudio.volume=clamp(0.2+s*.4,0,0.6);
+  if(sunsetAudio)sunsetAudio.volume=clamp(0.4+s*.35,0,0.75);
+  if(seagullAudio)seagullAudio.volume=clamp(0.35+(1-s)*.3,0,0.65);
+}
+
+function stopSounds(){
+  [forestAudio,birdsAudio,sunsetAudio,seagullAudio].forEach(a=>{
+    if(!a)return;
+    const fade=setInterval(()=>{a.volume=Math.max(0,a.volume-.05);if(a.volume<=0){clearInterval(fade);a.pause();}},80);
+  });
+  soundReady=false;
+}
+
+// ═══ BELL (Mario coin) ═══
+function playBell(){
+  try{
+    const ac=new(window.AudioContext||window.webkitAudioContext)();
+    [[1400,0,0.08],[1800,0.06,0.12]].forEach(([freq,delay,dur])=>{
+      const o=ac.createOscillator(),g=ac.createGain();
+      o.connect(g);g.connect(ac.destination);o.type='square';o.frequency.value=freq;
+      g.gain.setValueAtTime(0,ac.currentTime+delay);
+      g.gain.linearRampToValueAtTime(0.09,ac.currentTime+delay+0.01);
+      g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+delay+dur);
+      o.start(ac.currentTime+delay);o.stop(ac.currentTime+delay+dur+0.01);
+    });
+  }catch(e){}
+}
+
+// ═══ HEARTS ═══
+function addHeart(){
+  heartCount++;
+  const fh=document.createElement('div');fh.className='float-heart';fh.textContent='❤️';
+  fh.style.right=Math.round(40+Math.random()*60)+'px';fh.style.top=Math.round(40+Math.random()*30)+'px';
+  document.body.appendChild(fh);setTimeout(()=>fh.remove(),1200);
+  const hw=document.getElementById('hearts-wrap');
+  const h=document.createElement('span');h.className='heart-icon';h.textContent='❤️';hw.appendChild(h);
+}
+
+// ═══ SENSOR ═══
+async function connectSensor(){
+  if(connected){
+    micStream?.getTracks().forEach(t=>t.stop());audioCtx?.close();
+    micStream=audioCtx=analyser=null;connected=false;
+    document.getElementById('sens-lbl').textContent='לא מחובר';
+    document.getElementById('sdot').className='dot';
+    document.getElementById('conn-btn').textContent='🔌 חבר חיישן eSense';
+    document.getElementById('conn-btn').className='btn';
+    document.getElementById('rms-crow').style.display='none';return;
+  }
+  try{
+    const tmp=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+    tmp.getTracks().forEach(t=>t.stop());
+    const devs=await navigator.mediaDevices.enumerateDevices();
+    const aud=devs.filter(d=>d.kind==='audioinput');
+    document.getElementById('devsel').innerHTML=aud.map((d,i)=>`<option value="${d.deviceId}">${d.label||'כניסה '+(i+1)}</option>`).join('');
+    if(aud.length>1)document.getElementById('dev-crow').style.display='block';
+    const stream=await navigator.mediaDevices.getUserMedia({audio:{deviceId:aud[0]?.deviceId?{exact:aud[0].deviceId}:undefined,echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+    micStream=stream;audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    analyser=audioCtx.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=.78;
+    audioCtx.createMediaStreamSource(stream).connect(analyser);
+    connected=true;document.getElementById('sens-lbl').textContent='מחובר ✓';
+    document.getElementById('sdot').className='dot on';
+    document.getElementById('conn-btn').textContent='🔴 נתק';document.getElementById('conn-btn').className='btn danger';
+    document.getElementById('rms-crow').style.display='block';
+  }catch(e){document.getElementById('sens-lbl').textContent='שגיאה: '+e.message;}
+}
+
+// ═══ MAIN LOOP ═══
+const t0=performance.now();
+function loop(){
+  requestAnimationFrame(loop);
+
+  // read sensor
+  if(analyser){
+    const buf=new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(buf);
+    let r=0;for(let i=0;i<buf.length;i++)r+=buf[i]*buf[i];
+    r=Math.sqrt(r/buf.length);
+    rmsSmooth=lerp(rmsSmooth,r,.18);
+    rmsMin=Math.min(rmsMin,rmsSmooth)*.9998+rmsSmooth*.0002;
+    rmsMax=Math.max(rmsMax,rmsSmooth)*.9998+rmsSmooth*.0002;
+    const spread=Math.max(rmsMax-rmsMin,.002);
+    relaxTarget=1-clamp((rmsSmooth-rmsMin)/spread,0,1);
+    document.getElementById('rms-num').textContent=r.toFixed(4);
+    document.getElementById('rms-badge').textContent='RMS: '+r.toFixed(4);
+    document.getElementById('rfill').style.width=(relaxTarget*100)+'%';
+  }
+
+  if(!therapyOn)return;
+
+  // smooth season
+  const d=relaxTarget-season;
+  season+=d*.0015*(Math.abs(d)>.02?1:.3);
+  season=clamp(season,0,1);
+
+  // hearts
+  if(season>=lastHeartSeason+0.05&&season>prevSeason){
+    lastHeartSeason=Math.floor(season/0.05)*0.05;addHeart();playBell();
+  }
+  prevSeason=season;
+
+  // update video speed
+  updateVideoSpeed(season);
+  updateSounds(season);
+
+  // HUD
+  const pct=Math.round(season*100);
+  document.getElementById('pfill').style.width=pct+'%';
+  document.getElementById('pdot').style.left=pct+'%';
+  document.getElementById('scene-lbl').textContent=sceneLabel(currentScene,season);
+}
+loop();
+
+// ═══ TIMER ═══
+function formatTime(sec){const m=Math.floor(sec/60),s=sec%60;return m+':'+(s<10?'0':'')+s;}
+function startSessionTimer(){
+  sessionStart=Date.now();sessionHistory=[];heartCount=0;lastHeartSeason=0;prevSeason=0;
+  document.getElementById('hearts-wrap').innerHTML='';
+  const totalSec=sessionDurMin*60;
+  document.getElementById('timer-badge').textContent=formatTime(totalSec);
+  sessionTimer=setInterval(()=>{
+    const elapsed=Math.floor((Date.now()-sessionStart)/1000);
+    const remaining=Math.max(0,totalSec-elapsed);
+    document.getElementById('timer-badge').textContent=formatTime(remaining);
+    sessionHistory.push({t:elapsed,v:season});
+    if(remaining===0){clearInterval(sessionTimer);endSession();}
+  },1000);
+}
+function stopSessionTimer(){if(sessionTimer){clearInterval(sessionTimer);sessionTimer=null;}}
+
+// ═══ REPORT ═══
+function endSession(){
+  stopSounds();releaseWakeLock();therapyOn=false;
+  if(currentVideo){currentVideo.pause();currentVideo.style.display='none';}
+  ['hud','rms-badge','timer-badge','back-btn','hearts-wrap','speed-badge','sound-btn'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(id==='hud')el.classList.remove('on');
+    else el.style.display='none';
+  });
+  const vals=sessionHistory.map(h=>h.v);
+  const avg=vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length*100):0;
+  const peak=vals.length?Math.round(Math.max(...vals)*100):0;
+  const elapsed=Math.floor((Date.now()-sessionStart)/1000);
+  document.getElementById('rep-dur').textContent=formatTime(elapsed);
+  document.getElementById('rep-hearts').textContent=heartCount+' ❤️';
+  document.getElementById('rep-avg').textContent=avg+'%';
+  document.getElementById('rep-peak').textContent=peak+'%';
+  document.getElementById('report').classList.add('on');
+  setTimeout(()=>{
+    const gc=document.getElementById('graph-canvas');
+    const gw=document.getElementById('graph-wrap').clientWidth-24;
+    gc.width=gw;gc.height=140;
+    const gCtx=gc.getContext('2d');
+    gCtx.clearRect(0,0,gw,140);
+    [25,50,75].forEach(y=>{gCtx.strokeStyle='rgba(255,255,255,.06)';gCtx.lineWidth=1;gCtx.beginPath();gCtx.moveTo(0,140-y*1.4);gCtx.lineTo(gw,140-y*1.4);gCtx.stroke();});
+    if(vals.length>1){
+      const grad=gCtx.createLinearGradient(0,0,0,140);
+      grad.addColorStop(0,'rgba(122,184,232,.5)');grad.addColorStop(1,'rgba(122,184,232,.02)');
+      gCtx.beginPath();vals.forEach((v,i)=>{const x=(i/(vals.length-1))*gw,y=140-v*140;i===0?gCtx.moveTo(x,y):gCtx.lineTo(x,y);});
+      gCtx.lineTo(gw,140);gCtx.lineTo(0,140);gCtx.closePath();gCtx.fillStyle=grad;gCtx.fill();
+      gCtx.beginPath();vals.forEach((v,i)=>{const x=(i/(vals.length-1))*gw,y=140-v*140;i===0?gCtx.moveTo(x,y):gCtx.lineTo(x,y);});
+      gCtx.strokeStyle='rgba(122,184,232,.9)';gCtx.lineWidth=2;gCtx.stroke();
+    }
+  },100);
+}
+
+// ═══ WAKE LOCK ═══
+async function requestWakeLock(){try{if('wakeLock' in navigator)wakeLock=await navigator.wakeLock.request('screen');}catch(e){}}
+function releaseWakeLock(){if(wakeLock){wakeLock.release();wakeLock=null;}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&therapyOn)requestWakeLock();});
+
+// ═══ SCENE SELECT ═══
+function selectScene(sc){
+  currentScene=sc;
+  document.querySelectorAll('.scene-card').forEach(c=>c.classList.remove('sel'));
+  document.querySelector('[data-scene="'+sc+'"]').classList.add('sel');
+}
+
+// ═══ UI WIRING ═══
+document.querySelectorAll('.dur-tab').forEach(btn=>{
+  btn.onclick=()=>{document.querySelectorAll('.dur-tab').forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');sessionDurMin=parseInt(btn.dataset.min);};
+});
+document.getElementById('demo-sl').oninput=function(){
+  relaxTarget=this.value/100;
+  if(autoRaf){cancelAnimationFrame(autoRaf);autoRaf=null;document.getElementById('auto-btn').textContent='▶ הדגמה אוטומטית';document.getElementById('auto-btn').className='btn';}
+};
+document.getElementById('auto-btn').onclick=function(){
+  if(autoRaf){cancelAnimationFrame(autoRaf);autoRaf=null;this.textContent='▶ הדגמה אוטומטית';this.className='btn';}
+  else{this.textContent='⏹ עצור';this.className='btn on';(function step(){relaxTarget+=autoDir*.0025;if(relaxTarget>=1){relaxTarget=1;autoDir=-1;}if(relaxTarget<=0){relaxTarget=0;autoDir=1;}autoRaf=requestAnimationFrame(step);})();}
+};
+document.getElementById('reset-cal-btn').onclick=()=>{
+  rmsMin=999;rmsMax=0;rmsSmooth=0;
+  document.getElementById('reset-cal-btn').textContent='✓ אופס!';
+  setTimeout(()=>document.getElementById('reset-cal-btn').textContent='↺ אפס כיול אוטומטי',1500);
+};
+document.getElementById('start-btn').onclick=()=>{
+  if(!autoRaf&&!connected){
+    document.getElementById('auto-btn').textContent='⏹ עצור';document.getElementById('auto-btn').className='btn on';
+    (function step(){relaxTarget+=autoDir*.0025;if(relaxTarget>=1){relaxTarget=1;autoDir=-1;}if(relaxTarget<=0){relaxTarget=0;autoDir=1;}autoRaf=requestAnimationFrame(step);})();
+  }
+  season=0;relaxTarget=0.05;lastHeartSeason=0;prevSeason=0;
+  startVideo(currentScene);
+  initSounds(currentScene);
+  requestWakeLock();
+  therapyOn=true;
+  document.getElementById('home').style.display='none';
+  document.getElementById('hud').classList.add('on');
+  document.getElementById('rms-badge').style.display='block';
+  document.getElementById('timer-badge').style.display='block';
+  document.getElementById('back-btn').style.display='flex';
+  document.getElementById('hearts-wrap').style.display='flex';
+  document.getElementById('speed-badge').style.display='block';
+  document.getElementById('sound-btn').style.display='block';
+  startSessionTimer();
+};
+document.getElementById('sound-btn').onclick=function(){
+  playSounds();this.style.display='none';
+};
+document.getElementById('back-btn').onclick=()=>{
+  stopSessionTimer();stopSounds();releaseWakeLock();therapyOn=false;
+  if(currentVideo){currentVideo.pause();currentVideo.style.display='none';}
+  document.getElementById('home').style.display='flex';
+  document.getElementById('hud').classList.remove('on');
+  ['rms-badge','timer-badge','back-btn','hearts-wrap','speed-badge','sound-btn'].forEach(id=>document.getElementById(id).style.display='none');
+};
+document.getElementById('rep-close').onclick=()=>{
+  document.getElementById('report').classList.remove('on');
+  document.getElementById('home').style.display='flex';
+  document.getElementById('hearts-wrap').style.display='none';
+  season=0;
+};
+document.getElementById('devsel').onchange=async function(){
+  if(!connected)return;
+  micStream?.getTracks().forEach(t=>t.stop());audioCtx?.close();
+  const stream=await navigator.mediaDevices.getUserMedia({audio:{deviceId:{exact:this.value},echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+  micStream=stream;audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  analyser=audioCtx.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=.78;
+  audioCtx.createMediaStreamSource(stream).connect(analyser);
+};
+document.getElementById('conn-btn').onclick=connectSensor;
+</script>
+</body>
+</html>
