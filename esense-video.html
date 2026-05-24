@@ -245,7 +245,7 @@ function startVideo(scene){
   currentVideo = scene==='tree' ? vidTree : vidSunset;
   currentVideo.style.display='block';
   currentVideo.currentTime=0;
-  currentVideo.playbackRate=1.0;
+  currentVideo.playbackRate=0.15;
   currentVideo.load();
   currentVideo.play().catch(()=>{});
   // watchdog: check every 2s that video is playing
@@ -260,7 +260,7 @@ function startVideo(scene){
 
 function updateVideoSpeed(s){
   if(!currentVideo)return;
-  const speed=lerp(0.8,3.0,s);
+  const speed=lerp(0.15,0.8,s);
   try{currentVideo.playbackRate=speed;}catch(e){}
   if(currentVideo.paused&&therapyOn) currentVideo.play().catch(()=>{});
   const badge=document.getElementById('speed-badge');
