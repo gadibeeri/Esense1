@@ -216,7 +216,7 @@ select option{background:#0d1828}
 <script>
 // ═══ STATE ═══
 let relaxTarget=0.05, season=0;
-const RELAX_EASE=0.90; // reaching this fraction of real relaxation now produces the full (100%) scene effect
+const RELAX_EASE=0.85; // reaching this fraction of real relaxation now produces the full (100%) scene effect
 let rmsMin=999, rmsMax=0, rmsSmooth=0;
 let micStream=null, audioCtx=null, analyser=null, connected=false;
 let autoRaf=null, autoDir=1, therapyOn=false;
@@ -860,9 +860,12 @@ function stopSounds(){
 }
 
 // ═══ BELL ═══
+let bellCtx=null;
 function playBell(){
   try{
-    const ac=new(window.AudioContext||window.webkitAudioContext)();
+    if(!bellCtx)bellCtx=new(window.AudioContext||window.webkitAudioContext)();
+    if(bellCtx.state==='suspended')bellCtx.resume();
+    const ac=bellCtx;
     // Mario coin: two quick high tones
     [[1400,0,0.08],[1800,0.06,0.12]].forEach(([freq,delay,dur])=>{
       const o=ac.createOscillator(),g=ac.createGain();
@@ -1074,6 +1077,8 @@ document.getElementById('start-btn').onclick=()=>{
     (function step(){relaxTarget+=autoDir*.0025;if(relaxTarget>=1){relaxTarget=1;autoDir=-1;}if(relaxTarget<=0){relaxTarget=0;autoDir=1;}autoRaf=requestAnimationFrame(step);})();
   }
   // init and play sounds - load then play
+  if(!bellCtx)bellCtx=new(window.AudioContext||window.webkitAudioContext)();
+  if(bellCtx.state==='suspended')bellCtx.resume();
   initSounds(currentScene);
   [forestAudio,birdsAudio,sunsetAudio,seagullAudio,seedAudio].forEach(a=>{
     if(!a)return;
